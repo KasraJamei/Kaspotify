@@ -75,6 +75,14 @@ fun EqualizerScreen(
                 return@Column
             }
 
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (enabled) "Adjusting bands changes the sound of the current playback."
+                else "Turn on the switch above, or pick a preset/band below to enable it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(Modifier.height(16.dp))
             Text("Presets", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
@@ -123,7 +131,6 @@ fun EqualizerScreen(
                             val level = (minLevel + fraction * range).toInt().toShort()
                             eq.setBandLevel(band.index, level)
                         },
-                        enabled = enabled,
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(Modifier.width(8.dp))

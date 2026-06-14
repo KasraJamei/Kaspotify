@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -40,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -86,7 +88,6 @@ fun AppScaffold(viewModel: MusicViewModel) {
     val durationMs by viewModel.durationMs.collectAsStateWithLifecycle()
 
     val onMore: (Song) -> Unit = { moreSong = it }
-    val onStartDj: () -> Unit = { viewModel.startDj(); showNowPlaying = true }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -115,7 +116,13 @@ fun AppScaffold(viewModel: MusicViewModel) {
                 }
             }
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
+            ) {
+            Box(modifier = Modifier.fillMaxSize().widthIn(max = 600.dp)) {
                 when (selectedTab) {
                     Tab.LIBRARY -> {
                         val albumId = openedAlbumId
@@ -138,8 +145,7 @@ fun AppScaffold(viewModel: MusicViewModel) {
                                 onMore = onMore,
                                 onOpenAlbum = { openedAlbumId = it },
                                 onOpenArtist = { openedArtistName = it },
-                                onOpenSmartPlaylist = { openedSmartPlaylist = it },
-                                onStartDj = onStartDj
+                                onOpenSmartPlaylist = { openedSmartPlaylist = it }
                             )
                         }
                     }
@@ -151,8 +157,7 @@ fun AppScaffold(viewModel: MusicViewModel) {
                                 viewModel = viewModel,
                                 onOpenPlaylist = { openedPlaylistId = it },
                                 onOpenSmartPlaylist = { openedSmartPlaylist = it },
-                                onOpenQuality = { showQuality = true },
-                                onStartDj = onStartDj
+                                onOpenQuality = { showQuality = true }
                             )
                         } else {
                             PlaylistDetailScreen(
@@ -164,6 +169,7 @@ fun AppScaffold(viewModel: MusicViewModel) {
                         }
                     }
                 }
+            }
             }
         }
 

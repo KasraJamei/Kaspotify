@@ -139,30 +139,6 @@ class MusicViewModel @Inject constructor(
 
     fun toggleFavorite(song: Song) = viewModelScope.launch { repository.toggleFavorite(song) }
 
-    // ---- AI DJ ----
-
-    /**
-     * Builds a personalized, no-network "DJ" queue: favorites, most-played and recently-played are
-     * weighted up, a random factor keeps in some discovery, and tracks are de-clustered so the same
-     * artist doesn't repeat back-to-back. Then it starts playing.
-     */
-    fun startDj() {
-        val all = songs.value
-        if (all.isEmpty()) return
-        val favIds = favorites.value.mapTo(HashSet()) { it.id }
-        val playedRank = mostPlayed.value.mapIndexed { i, s -> s.id to i }.toMap()
-        val recentIds = recentlyPlayed.value.mapTo(HashSet()) { it.id }
-        val rnd = Random(System.currentTimeMillis())
-        val ranked = all.map { s ->
-            var score = 1.0 + rnd.nextDouble() * 2.0
-            if (s.id in favIds) score += 4.0
-            playedRank[s.id]?.let { rank -> score += (12 - rank).coerceAtLeast(0) * 0.5 }
-            if (s.id in recentIds) score += 1.5
-            s to score
-        }.sortedByDescending { it.second }.map { it.first }
-        player.playQueue(declusterByArtist(ranked).take(DJ_QUEUE_SIZE), 0)
-    }
-
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }
@@ -174,19 +150,6 @@ class MusicViewModel @Inject constructor(
     /** Creates and saves a playlist populated with [songs] (used by the smart-playlist builder). */
     fun createSmartPlaylist(name: String, songs: List<Song>) =
         viewModelScope.launch { repository.createPlaylistWith(name, songs) }
-
-    private fun declusterByArtist(songs: List<Song>): List<Song> {
-        val remaining = songs.toMutableList()
-        val result = ArrayList<Song>(remaining.size)
-        var lastArtist: String? = null
-        while (remaining.isNotEmpty()) {
-            val idx = remaining.indexOfFirst { it.artist != lastArtist }.takeIf { it >= 0 } ?: 0
-            val pick = remaining.removeAt(idx)
-            result += pick
-            lastArtist = pick.artist
-        }
-        return result
-    }
 
     private fun dailyPick(all: List<Song>): List<Song> {
         if (all.isEmpty()) return emptyList()
@@ -209,7 +172,6 @@ class MusicViewModel @Inject constructor(
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
     private companion object {
-        const val DJ_QUEUE_SIZE = 60
         const val DAILY_PLAYLIST_SIZE = 30
     }
 }

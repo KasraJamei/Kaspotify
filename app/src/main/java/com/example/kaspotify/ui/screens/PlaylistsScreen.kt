@@ -49,7 +49,6 @@ fun PlaylistsScreen(
     onOpenPlaylist: (Long) -> Unit,
     onOpenSmartPlaylist: (SmartPlaylistType) -> Unit,
     onOpenQuality: () -> Unit,
-    onStartDj: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
@@ -86,9 +85,6 @@ fun PlaylistsScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        MadeForYouCard("AI DJ", Icons.Filled.AutoAwesome, highlighted = true, onClick = onStartDj)
-                    }
                     items(SmartPlaylistType.entries.toList(), key = { it.name }) { type ->
                         MadeForYouCard(type.title, type.icon) { onOpenSmartPlaylist(type) }
                     }
@@ -176,12 +172,10 @@ fun PlaylistsScreen(
 private fun MadeForYouCard(
     label: String,
     icon: ImageVector,
-    highlighted: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
-        color = if (highlighted) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-        else MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
             .width(132.dp)

@@ -73,6 +73,7 @@ class EqualizerController @Inject constructor() {
     fun setBandLevel(bandIndex: Int, levelMilliBel: Short) {
         val eq = equalizer ?: return
         try {
+            ensureEnabled(eq)
             eq.setBandLevel(bandIndex.toShort(), levelMilliBel)
             _currentPreset.value = -1 // custom
             refreshBands()
@@ -83,10 +84,19 @@ class EqualizerController @Inject constructor() {
     fun usePreset(presetIndex: Int) {
         val eq = equalizer ?: return
         try {
+            ensureEnabled(eq)
             eq.usePreset(presetIndex.toShort())
             _currentPreset.value = presetIndex
             refreshBands()
         } catch (_: Throwable) {
+        }
+    }
+
+    /** Adjusting bands/presets only has an audible effect once the effect is enabled. */
+    private fun ensureEnabled(eq: Equalizer) {
+        if (!eq.enabled) {
+            eq.enabled = true
+            _enabled.value = true
         }
     }
 

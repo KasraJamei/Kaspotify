@@ -143,7 +143,7 @@ fun NowPlayingScreen(
                         }
                     }) {
                         Icon(
-                            Icons.Filled.Equalizer,
+                            Icons.Filled.GraphicEq,
                             contentDescription = "Visualizer",
                             tint = if (visualizerEnabled) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant
@@ -156,7 +156,7 @@ fun NowPlayingScreen(
                         Icon(Icons.Filled.QueueMusic, contentDescription = "Queue")
                     }
                     IconButton(onClick = onOpenEqualizer) {
-                        Icon(Icons.Filled.GraphicEq, contentDescription = "Equalizer")
+                        Icon(Icons.Filled.Equalizer, contentDescription = "Equalizer")
                     }
                     SleepTimerMenu(
                         selected = sleepTimer,

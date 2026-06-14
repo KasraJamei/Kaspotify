@@ -16,13 +16,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
@@ -96,7 +94,6 @@ fun LibraryScreen(
     onOpenAlbum: (Long) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenSmartPlaylist: (SmartPlaylistType) -> Unit,
-    onStartDj: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -116,18 +113,10 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Your Library", style = MaterialTheme.typography.headlineMedium)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalButton(onClick = onStartDj, enabled = songs.isNotEmpty()) {
-                    Icon(Icons.Filled.AutoAwesome, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("DJ")
-                }
+            Button(onClick = { viewModel.shuffleAll(songs) }, enabled = songs.isNotEmpty()) {
+                Icon(Icons.Filled.Shuffle, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { viewModel.shuffleAll(songs) }, enabled = songs.isNotEmpty()) {
-                    Icon(Icons.Filled.Shuffle, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Shuffle")
-                }
+                Text("Shuffle")
             }
         }
 
