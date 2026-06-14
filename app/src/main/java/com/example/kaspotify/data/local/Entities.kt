@@ -37,3 +37,10 @@ data class PlaylistWithCount(
     val name: String,
     val songCount: Int
 )
+
+/** A past search term, kept for the search history list. */
+@Entity(tableName = "search_history")
+data class SearchHistoryEntity(
+    @PrimaryKey val query: String,
+    val lastUsedAt: Long = System.currentTimeMillis()
+)

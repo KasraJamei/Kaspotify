@@ -259,7 +259,11 @@ class PlayerController @Inject constructor(
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
+            .setAlbumArtist(artist)
             .setAlbumTitle(album)
+            // displayTitle/subtitle are what several lock screens & Bluetooth/Auto head units read.
+            .setDisplayTitle(title)
+            .setSubtitle(artist)
             .setArtworkUri(artworkUri)
             .build()
         return MediaItem.Builder()

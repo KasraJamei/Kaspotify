@@ -69,4 +69,18 @@ interface MusicDao {
         """
     )
     fun playlistsWithCounts(): Flow<List<PlaylistWithCount>>
+
+    // ---- Search history ----
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSearch(entry: SearchHistoryEntity)
+
+    @Query("SELECT query FROM search_history ORDER BY lastUsedAt DESC LIMIT :limit")
+    fun recentSearches(limit: Int = 12): Flow<List<String>>
+
+    @Query("DELETE FROM search_history WHERE query = :query")
+    suspend fun deleteSearch(query: String)
+
+    @Query("DELETE FROM search_history")
+    suspend fun clearSearchHistory()
 }

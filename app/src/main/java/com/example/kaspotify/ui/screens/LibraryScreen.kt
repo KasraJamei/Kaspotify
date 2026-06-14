@@ -16,10 +16,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
@@ -48,6 +51,7 @@ import com.example.kaspotify.ui.components.SongRow
 private val tabs = listOf("Songs", "Albums", "Artists", "Favorites")
 
 enum class SmartPlaylistType(val title: String, val icon: ImageVector) {
+    PLAYLIST_OF_DAY("Playlist of the Day", Icons.Filled.Today),
     RECENTLY_ADDED("Recently Added", Icons.Filled.History),
     MOST_PLAYED("Most Played", Icons.Filled.Whatshot)
 }
@@ -92,6 +96,7 @@ fun LibraryScreen(
     onOpenAlbum: (Long) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenSmartPlaylist: (SmartPlaylistType) -> Unit,
+    onStartDj: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -111,10 +116,18 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Your Library", style = MaterialTheme.typography.headlineMedium)
-            Button(onClick = { viewModel.shuffleAll(songs) }, enabled = songs.isNotEmpty()) {
-                Icon(Icons.Filled.Shuffle, contentDescription = null)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalButton(onClick = onStartDj, enabled = songs.isNotEmpty()) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("DJ")
+                }
                 Spacer(Modifier.width(8.dp))
-                Text("Shuffle")
+                Button(onClick = { viewModel.shuffleAll(songs) }, enabled = songs.isNotEmpty()) {
+                    Icon(Icons.Filled.Shuffle, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Shuffle")
+                }
             }
         }
 

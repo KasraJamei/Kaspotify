@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.QueueMusic
@@ -53,6 +54,7 @@ import com.example.kaspotify.ui.screens.LibraryScreen
 import com.example.kaspotify.ui.screens.NowPlayingScreen
 import com.example.kaspotify.ui.screens.PlaylistDetailScreen
 import com.example.kaspotify.ui.screens.PlaylistsScreen
+import com.example.kaspotify.ui.screens.QualityScreen
 import com.example.kaspotify.ui.screens.QueueScreen
 import com.example.kaspotify.ui.screens.SearchScreen
 import com.example.kaspotify.ui.screens.SmartPlaylistScreen
@@ -75,6 +77,7 @@ fun AppScaffold(viewModel: MusicViewModel) {
     var showEqualizer by remember { mutableStateOf(false) }
     var showEffects by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
+    var showQuality by remember { mutableStateOf(false) }
     var moreSong by remember { mutableStateOf<Song?>(null) }
 
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
@@ -83,6 +86,7 @@ fun AppScaffold(viewModel: MusicViewModel) {
     val durationMs by viewModel.durationMs.collectAsStateWithLifecycle()
 
     val onMore: (Song) -> Unit = { moreSong = it }
+    val onStartDj: () -> Unit = { viewModel.startDj(); showNowPlaying = true }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -116,7 +120,6 @@ fun AppScaffold(viewModel: MusicViewModel) {
                     Tab.LIBRARY -> {
                         val albumId = openedAlbumId
                         val artistName = openedArtistName
-                        val smartPlaylist = openedSmartPlaylist
                         when {
                             albumId != null -> AlbumDetailScreen(
                                 albumId = albumId,
@@ -130,26 +133,13 @@ fun AppScaffold(viewModel: MusicViewModel) {
                                 onBack = { openedArtistName = null },
                                 onMore = onMore
                             )
-                            smartPlaylist != null -> {
-                                val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
-                                val mostPlayed by viewModel.mostPlayed.collectAsStateWithLifecycle()
-                                SmartPlaylistScreen(
-                                    title = smartPlaylist.title,
-                                    songs = when (smartPlaylist) {
-                                        SmartPlaylistType.RECENTLY_ADDED -> recentlyAdded
-                                        SmartPlaylistType.MOST_PLAYED -> mostPlayed
-                                    },
-                                    viewModel = viewModel,
-                                    onBack = { openedSmartPlaylist = null },
-                                    onMore = onMore
-                                )
-                            }
                             else -> LibraryScreen(
                                 viewModel = viewModel,
                                 onMore = onMore,
                                 onOpenAlbum = { openedAlbumId = it },
                                 onOpenArtist = { openedArtistName = it },
-                                onOpenSmartPlaylist = { openedSmartPlaylist = it }
+                                onOpenSmartPlaylist = { openedSmartPlaylist = it },
+                                onStartDj = onStartDj
                             )
                         }
                     }
@@ -157,7 +147,13 @@ fun AppScaffold(viewModel: MusicViewModel) {
                     Tab.PLAYLISTS -> {
                         val id = openedPlaylistId
                         if (id == null) {
-                            PlaylistsScreen(viewModel, onOpenPlaylist = { openedPlaylistId = it })
+                            PlaylistsScreen(
+                                viewModel = viewModel,
+                                onOpenPlaylist = { openedPlaylistId = it },
+                                onOpenSmartPlaylist = { openedSmartPlaylist = it },
+                                onOpenQuality = { showQuality = true },
+                                onStartDj = onStartDj
+                            )
                         } else {
                             PlaylistDetailScreen(
                                 playlistId = id,
@@ -228,6 +224,52 @@ fun AppScaffold(viewModel: MusicViewModel) {
             BackHandler(enabled = showQueue) { showQueue = false }
             QueueScreen(viewModel = viewModel, onCollapse = { showQueue = false })
         }
+
+        // Smart-playlist list overlay (Playlist of the Day / Recently Added / Most Played).
+        AnimatedVisibility(
+            visible = openedSmartPlaylist != null,
+            enter = slideInVertically(
+                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+                initialOffsetY = { it }
+            ) + fadeIn(tween(200)),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150))
+        ) {
+            BackHandler(enabled = openedSmartPlaylist != null) { openedSmartPlaylist = null }
+            val type = openedSmartPlaylist
+            if (type != null) {
+                val playlistOfTheDay by viewModel.playlistOfTheDay.collectAsStateWithLifecycle()
+                val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
+                val mostPlayed by viewModel.mostPlayed.collectAsStateWithLifecycle()
+                SmartPlaylistScreen(
+                    title = type.title,
+                    songs = when (type) {
+                        SmartPlaylistType.PLAYLIST_OF_DAY -> playlistOfTheDay
+                        SmartPlaylistType.RECENTLY_ADDED -> recentlyAdded
+                        SmartPlaylistType.MOST_PLAYED -> mostPlayed
+                    },
+                    viewModel = viewModel,
+                    onBack = { openedSmartPlaylist = null },
+                    onMore = onMore
+                )
+            }
+        }
+
+        // "By Quality" overlay.
+        AnimatedVisibility(
+            visible = showQuality,
+            enter = slideInVertically(
+                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+                initialOffsetY = { it }
+            ) + fadeIn(tween(200)),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150))
+        ) {
+            BackHandler(enabled = showQuality) { showQuality = false }
+            QualityScreen(
+                viewModel = viewModel,
+                onBack = { showQuality = false },
+                onMore = onMore
+            )
+        }
     }
 
     moreSong?.let { song ->
@@ -245,6 +287,7 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
     val sheetState = rememberModalBottomSheetState()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     var pickingPlaylist by remember { mutableStateOf(false) }
+    var showingDetails by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
@@ -252,7 +295,9 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
                 headlineContent = { Text(song.title) },
                 supportingContent = { Text(song.artist) }
             )
-            if (!pickingPlaylist) {
+            if (showingDetails) {
+                SongDetails(song)
+            } else if (!pickingPlaylist) {
                 SheetAction(Icons.Filled.QueuePlayNext, "Play next") {
                     viewModel.playNext(song); onDismiss()
                 }
@@ -261,6 +306,9 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
                 }
                 SheetAction(Icons.Filled.PlaylistAdd, "Add to playlist") {
                     pickingPlaylist = true
+                }
+                SheetAction(Icons.Filled.Info, "Details") {
+                    showingDetails = true
                 }
             } else {
                 Text(
@@ -302,4 +350,35 @@ private fun SheetAction(icon: ImageVector, label: String, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick)
     )
+}
+
+@Composable
+private fun SongDetails(song: Song) {
+    val rows = buildList {
+        add("Title" to song.title)
+        add("Artist" to song.artist)
+        add("Album" to song.album)
+        if (song.year > 0) add("Year" to song.year.toString())
+        val mins = song.durationMs / 60000
+        val secs = (song.durationMs / 1000) % 60
+        add("Duration" to String.format(java.util.Locale.US, "%d:%02d", mins, secs))
+        song.qualityLabel.takeIf { it.isNotEmpty() }?.let { add("Quality" to it) }
+        song.bitrateBps?.let { add("Bitrate" to "${it / 1000} kbps") }
+        song.mimeType.takeIf { it.isNotEmpty() }?.let { add("Format" to it) }
+        song.filePath.takeIf { it.isNotEmpty() }?.let { add("Path" to it) }
+    }
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        rows.forEach { (label, value) ->
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+        }
+    }
 }

@@ -12,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 private const val BAR_COUNT = 32
 
@@ -28,20 +30,30 @@ fun VisualizerView(
     val levels = remember { List(BAR_COUNT) { Animatable(0f) } }
 
     LaunchedEffect(waveform) {
-        if (waveform.isEmpty()) return@LaunchedEffect
-        val samplesPerBar = (waveform.size / BAR_COUNT).coerceAtLeast(1)
-        for (i in 0 until BAR_COUNT) {
-            var sum = 0f
-            val start = i * samplesPerBar
-            val end = (start + samplesPerBar).coerceAtMost(waveform.size)
-            for (j in start until end) {
-                // Unsigned 8-bit PCM is centered at 128; distance from center = amplitude.
-                val amplitude = kotlin.math.abs((waveform[j].toInt() and 0xFF) - 128)
-                sum += amplitude
+        if (waveform.isEmpty()) {
+            // Settle bars back to baseline when capture stops.
+            coroutineScope {
+                levels.forEach { level -> launch { level.animateTo(0f, tween(250)) } }
             }
-            val avg = if (end > start) sum / (end - start) else 0f
-            val normalized = (avg / 128f).coerceIn(0f, 1f)
-            levels[i].animateTo(normalized, animationSpec = tween(durationMillis = 80))
+            return@LaunchedEffect
+        }
+        val samplesPerBar = (waveform.size / BAR_COUNT).coerceAtLeast(1)
+        // Animate every bar concurrently so the whole visualizer updates each frame
+        // (animating them sequentially made each frame take BAR_COUNT * duration to apply).
+        coroutineScope {
+            for (i in 0 until BAR_COUNT) {
+                var sum = 0f
+                val start = i * samplesPerBar
+                val end = (start + samplesPerBar).coerceAtMost(waveform.size)
+                for (j in start until end) {
+                    // Unsigned 8-bit PCM is centered at 128; distance from center = amplitude.
+                    val amplitude = kotlin.math.abs((waveform[j].toInt() and 0xFF) - 128)
+                    sum += amplitude
+                }
+                val avg = if (end > start) sum / (end - start) else 0f
+                val normalized = (avg / 128f).coerceIn(0f, 1f)
+                launch { levels[i].animateTo(normalized, animationSpec = tween(durationMillis = 120)) }
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.kaspotify.data.model.Album
 import com.example.kaspotify.data.model.Artist
 import com.example.kaspotify.data.model.Playlist
+import com.example.kaspotify.data.model.QualityTier
 import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.data.repository.MusicRepository
 import com.example.kaspotify.playback.EqualizerController
@@ -20,9 +21,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.random.Random
 
 @HiltViewModel
 class MusicViewModel @Inject constructor(
@@ -51,6 +54,17 @@ class MusicViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val searchResults: StateFlow<List<Song>> = repository.search(_searchQuery).asState(emptyList())
+    val recentSearches: StateFlow<List<String>> = repository.recentSearches.asState(emptyList())
+
+    /** A daily-rotating mix, deterministic per calendar day. */
+    val playlistOfTheDay: StateFlow<List<Song>> =
+        repository.songs.map { dailyPick(it) }.asState(emptyList())
+
+    /** All songs grouped into quality tiers (best tier first) for the "By Quality" browser. */
+    val songsByQuality: StateFlow<Map<QualityTier, List<Song>>> =
+        repository.songs
+            .map { list -> list.groupBy { it.qualityTier }.toSortedMap(compareBy { it.ordinal }) }
+            .asState(emptyMap())
 
     // Playback state surfaced from the controller.
     val currentSong: StateFlow<Song?> get() = player.currentSong
@@ -125,8 +139,59 @@ class MusicViewModel @Inject constructor(
 
     fun toggleFavorite(song: Song) = viewModelScope.launch { repository.toggleFavorite(song) }
 
+    // ---- AI DJ ----
+
+    /**
+     * Builds a personalized, no-network "DJ" queue: favorites, most-played and recently-played are
+     * weighted up, a random factor keeps in some discovery, and tracks are de-clustered so the same
+     * artist doesn't repeat back-to-back. Then it starts playing.
+     */
+    fun startDj() {
+        val all = songs.value
+        if (all.isEmpty()) return
+        val favIds = favorites.value.mapTo(HashSet()) { it.id }
+        val playedRank = mostPlayed.value.mapIndexed { i, s -> s.id to i }.toMap()
+        val recentIds = recentlyPlayed.value.mapTo(HashSet()) { it.id }
+        val rnd = Random(System.currentTimeMillis())
+        val ranked = all.map { s ->
+            var score = 1.0 + rnd.nextDouble() * 2.0
+            if (s.id in favIds) score += 4.0
+            playedRank[s.id]?.let { rank -> score += (12 - rank).coerceAtLeast(0) * 0.5 }
+            if (s.id in recentIds) score += 1.5
+            s to score
+        }.sortedByDescending { it.second }.map { it.first }
+        player.playQueue(declusterByArtist(ranked).take(DJ_QUEUE_SIZE), 0)
+    }
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
+    }
+
+    fun recordSearch(query: String) = viewModelScope.launch { repository.recordSearch(query) }
+    fun removeSearch(query: String) = viewModelScope.launch { repository.removeSearch(query) }
+    fun clearSearchHistory() = viewModelScope.launch { repository.clearSearchHistory() }
+
+    /** Creates and saves a playlist populated with [songs] (used by the smart-playlist builder). */
+    fun createSmartPlaylist(name: String, songs: List<Song>) =
+        viewModelScope.launch { repository.createPlaylistWith(name, songs) }
+
+    private fun declusterByArtist(songs: List<Song>): List<Song> {
+        val remaining = songs.toMutableList()
+        val result = ArrayList<Song>(remaining.size)
+        var lastArtist: String? = null
+        while (remaining.isNotEmpty()) {
+            val idx = remaining.indexOfFirst { it.artist != lastArtist }.takeIf { it >= 0 } ?: 0
+            val pick = remaining.removeAt(idx)
+            result += pick
+            lastArtist = pick.artist
+        }
+        return result
+    }
+
+    private fun dailyPick(all: List<Song>): List<Song> {
+        if (all.isEmpty()) return emptyList()
+        val epochDay = System.currentTimeMillis() / 86_400_000L
+        return all.shuffled(Random(epochDay)).take(DAILY_PLAYLIST_SIZE)
     }
 
     // ---- Playlist actions ----
@@ -142,4 +207,9 @@ class MusicViewModel @Inject constructor(
 
     private fun <T> Flow<T>.asState(initial: T): StateFlow<T> =
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
+
+    private companion object {
+        const val DJ_QUEUE_SIZE = 60
+        const val DAILY_PLAYLIST_SIZE = 30
+    }
 }

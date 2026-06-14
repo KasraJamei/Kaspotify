@@ -15,6 +15,7 @@ import javax.inject.Singleton
 class VisualizerController @Inject constructor() {
 
     private var visualizer: Visualizer? = null
+    private var sessionId: Int = 0
 
     private val _available = MutableStateFlow(false)
     val available: StateFlow<Boolean> = _available.asStateFlow()
@@ -25,10 +26,19 @@ class VisualizerController @Inject constructor() {
     private val _waveform = MutableStateFlow<ByteArray>(ByteArray(0))
     val waveform: StateFlow<ByteArray> = _waveform.asStateFlow()
 
-    /** Called from the service when the audio session id is known. Safe to call repeatedly. */
+    /**
+     * Called from the service when the audio session id is known. We only remember the id here:
+     * actually constructing the [Visualizer] requires RECORD_AUDIO, which isn't granted until the
+     * user enables the visualizer, so creation is deferred to [setEnabled].
+     */
     fun attach(audioSessionId: Int) {
         if (audioSessionId == 0) return
-        release()
+        sessionId = audioSessionId
+    }
+
+    private fun createVisualizer() {
+        val audioSessionId = sessionId
+        if (audioSessionId == 0 || visualizer != null) return
         try {
             val viz = Visualizer(audioSessionId)
             viz.setCaptureSize(CAPTURE_SIZE)
@@ -61,11 +71,20 @@ class VisualizerController @Inject constructor() {
     }
 
     fun setEnabled(enabled: Boolean) {
-        val viz = visualizer ?: return
+        if (enabled) {
+            // Created lazily here: by now RECORD_AUDIO has been granted by the UI.
+            createVisualizer()
+        }
+        val viz = visualizer ?: run {
+            _enabled.value = false
+            return
+        }
         try {
             viz.enabled = enabled
             _enabled.value = viz.enabled
+            if (!enabled) _waveform.value = ByteArray(0)
         } catch (_: Throwable) {
+            _enabled.value = false
         }
     }
 

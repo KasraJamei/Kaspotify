@@ -2,6 +2,7 @@ package com.example.kaspotify.ui.theme
 
 import android.app.Activity
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +40,7 @@ fun KaspotifyTheme(
     val targetPrimary = accentColor ?: SpotifyGreen
     val animatedPrimary by animateColorAsState(
         targetValue = targetPrimary,
-        animationSpec = tween(durationMillis = 600),
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "primaryColor"
     )
     val onPrimary = if (animatedPrimary.luminance() > 0.5f) Color.Black else Color.White

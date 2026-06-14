@@ -6,19 +6,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,20 +36,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kaspotify.data.model.QualityTier
+import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.ui.MusicViewModel
 
 @Composable
 fun PlaylistsScreen(
     viewModel: MusicViewModel,
     onOpenPlaylist: (Long) -> Unit,
+    onOpenSmartPlaylist: (SmartPlaylistType) -> Unit,
+    onOpenQuality: () -> Unit,
+    onStartDj: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
-    var showDialog by remember { mutableStateOf(false) }
+    var showNewDialog by remember { mutableStateOf(false) }
+    var showBuilder by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,17 +65,53 @@ fun PlaylistsScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Playlists", style = MaterialTheme.typography.headlineMedium)
-            IconButton(onClick = { showDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "New playlist")
+            Row {
+                IconButton(onClick = { showBuilder = true }) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = "Smart playlist")
+                }
+                IconButton(onClick = { showNewDialog = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "New playlist")
+                }
             }
         }
 
-        if (playlists.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No playlists yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            item(key = "made_for_you") {
+                Text(
+                    "Made for you",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                )
+                LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        MadeForYouCard("AI DJ", Icons.Filled.AutoAwesome, highlighted = true, onClick = onStartDj)
+                    }
+                    items(SmartPlaylistType.entries.toList(), key = { it.name }) { type ->
+                        MadeForYouCard(type.title, type.icon) { onOpenSmartPlaylist(type) }
+                    }
+                    item {
+                        MadeForYouCard("By Quality", Icons.Filled.GraphicEq, onClick = onOpenQuality)
+                    }
+                }
+                Text(
+                    "Your playlists",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp)
+                )
             }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+            if (playlists.isEmpty()) {
+                item(key = "empty") {
+                    Text(
+                        "No playlists yet. Tap + to create one, or ✦ to build one from your library.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            } else {
                 items(playlists, key = { it.id }) { playlist ->
                     Row(
                         modifier = Modifier
@@ -109,14 +155,51 @@ fun PlaylistsScreen(
         }
     }
 
-    if (showDialog) {
+    if (showNewDialog) {
         NewPlaylistDialog(
             onConfirm = { name ->
                 viewModel.createPlaylist(name)
-                showDialog = false
+                showNewDialog = false
             },
-            onDismiss = { showDialog = false }
+            onDismiss = { showNewDialog = false }
         )
+    }
+    if (showBuilder) {
+        SmartPlaylistBuilderDialog(
+            viewModel = viewModel,
+            onDismiss = { showBuilder = false }
+        )
+    }
+}
+
+@Composable
+private fun MadeForYouCard(
+    label: String,
+    icon: ImageVector,
+    highlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (highlighted) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier
+            .width(132.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.size(10.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2
+            )
+        }
     }
 }
 
@@ -135,13 +218,107 @@ private fun NewPlaylistDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit
             )
         },
         confirmButton = {
-            TextButton(
-                onClick = { onConfirm(name) },
-                enabled = name.isNotBlank()
-            ) { Text("Create") }
+            TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) { Text("Create") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
+
+private enum class BuilderSource(val label: String) {
+    ALL("All songs"),
+    FAVORITES("Favorites"),
+    MOST_PLAYED("Most played"),
+    RECENTLY_ADDED("Recently added")
+}
+
+/** Lets the user assemble a playlist from their library by source + quality, then saves it. */
+@Composable
+private fun SmartPlaylistBuilderDialog(viewModel: MusicViewModel, onDismiss: () -> Unit) {
+    val allSongs by viewModel.songs.collectAsStateWithLifecycle()
+    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val mostPlayed by viewModel.mostPlayed.collectAsStateWithLifecycle()
+    val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
+
+    var name by remember { mutableStateOf("") }
+    var source by remember { mutableStateOf(BuilderSource.ALL) }
+    var tier by remember { mutableStateOf<QualityTier?>(null) }
+
+    fun resolve(): List<Song> {
+        val base = when (source) {
+            BuilderSource.ALL -> allSongs
+            BuilderSource.FAVORITES -> favorites
+            BuilderSource.MOST_PLAYED -> mostPlayed
+            BuilderSource.RECENTLY_ADDED -> recentlyAdded
+        }
+        val filtered = tier?.let { t -> base.filter { it.qualityTier == t } } ?: base
+        return filtered.take(MAX_BUILDER_SONGS)
+    }
+
+    val resolvedCount = resolve().size
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Build a playlist") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = { Text("Playlist name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.size(12.dp))
+                Text("From", style = MaterialTheme.typography.labelLarge)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(BuilderSource.entries.toList(), key = { it.name }) { s ->
+                        FilterChip(
+                            selected = source == s,
+                            onClick = { source = s },
+                            label = { Text(s.label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
+                Text("Quality", style = MaterialTheme.typography.labelLarge)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChip(
+                            selected = tier == null,
+                            onClick = { tier = null },
+                            label = { Text("Any") }
+                        )
+                    }
+                    items(QualityTier.entries.toList(), key = { it.name }) { t ->
+                        FilterChip(
+                            selected = tier == t,
+                            onClick = { tier = t },
+                            label = { Text(t.label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.size(12.dp))
+                Text(
+                    "$resolvedCount songs match",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    viewModel.createSmartPlaylist(
+                        name.ifBlank { source.label },
+                        resolve()
+                    )
+                    onDismiss()
+                },
+                enabled = resolvedCount > 0
+            ) { Text("Create") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+private const val MAX_BUILDER_SONGS = 100

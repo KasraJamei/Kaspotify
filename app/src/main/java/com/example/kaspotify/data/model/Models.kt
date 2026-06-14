@@ -48,10 +48,33 @@ data class Song(
             }
         }
 
+    /** Bucketed quality tier used by the "By Quality" browse section. */
+    val qualityTier: QualityTier
+        get() {
+            if (isLossless) return QualityTier.LOSSLESS
+            val kbps = bitrateBps?.let { it / 1000 } ?: return QualityTier.UNKNOWN
+            return when {
+                kbps >= 300 -> QualityTier.KBPS_320
+                kbps >= 224 -> QualityTier.KBPS_256
+                kbps >= 160 -> QualityTier.KBPS_192
+                else -> QualityTier.KBPS_128
+            }
+        }
+
     companion object {
         private val ALBUM_ART_BASE: Uri = Uri.parse("content://media/external/audio/albumart")
         private val LOSSLESS_MIME_TYPES = listOf("flac", "wav", "x-wav", "alac", "ape")
     }
+}
+
+/** Audio-quality buckets, ordered best-first via [ordinal]. */
+enum class QualityTier(val label: String) {
+    LOSSLESS("Lossless"),
+    KBPS_320("320 kbps"),
+    KBPS_256("256 kbps"),
+    KBPS_192("192 kbps"),
+    KBPS_128("≤ 128 kbps"),
+    UNKNOWN("Unknown")
 }
 
 data class Album(

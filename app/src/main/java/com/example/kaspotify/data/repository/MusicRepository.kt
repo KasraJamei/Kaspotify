@@ -3,6 +3,7 @@ package com.example.kaspotify.data.repository
 import com.example.kaspotify.data.local.MusicDao
 import com.example.kaspotify.data.local.PlaylistEntity
 import com.example.kaspotify.data.local.PlaylistSongCrossRef
+import com.example.kaspotify.data.local.SearchHistoryEntity
 import com.example.kaspotify.data.local.SongStateEntity
 import com.example.kaspotify.data.media.MediaStoreImporter
 import com.example.kaspotify.data.model.Album
@@ -114,6 +115,32 @@ class MusicRepository @Inject constructor(
                 }
             }
         }
+
+    // ---- Search history ----
+
+    val recentSearches: Flow<List<String>> = dao.recentSearches()
+
+    suspend fun recordSearch(query: String) {
+        val q = query.trim()
+        if (q.length < 2) return
+        dao.upsertSearch(SearchHistoryEntity(query = q))
+    }
+
+    suspend fun removeSearch(query: String) = dao.deleteSearch(query)
+
+    suspend fun clearSearchHistory() = dao.clearSearchHistory()
+
+    // ---- Bulk playlist creation (used by the smart-playlist builder) ----
+
+    suspend fun createPlaylistWith(name: String, songs: List<Song>): Long {
+        val id = createPlaylist(name)
+        songs.forEachIndexed { index, song ->
+            dao.insertPlaylistSong(
+                PlaylistSongCrossRef(playlistId = id, songId = song.id, position = index)
+            )
+        }
+        return id
+    }
 
     private fun orderByIds(songs: List<Song>, ids: List<Long>): List<Song> {
         val byId = songs.associateBy { it.id }

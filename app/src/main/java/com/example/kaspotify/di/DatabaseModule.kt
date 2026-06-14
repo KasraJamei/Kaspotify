@@ -19,6 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MusicDatabase =
         Room.databaseBuilder(context, MusicDatabase::class.java, "kaspotify.db")
+            .addMigrations(MusicDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
 
