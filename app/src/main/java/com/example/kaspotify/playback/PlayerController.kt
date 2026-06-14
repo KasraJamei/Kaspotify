@@ -1,0 +1,229 @@
+package com.example.kaspotify.playback
+
+import android.content.ComponentName
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.example.kaspotify.data.model.Song
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
+import javax.inject.Singleton
+
+enum class RepeatMode { OFF, ALL, ONE }
+
+/** Single UI-facing entry point to playback. Connects to [PlaybackService] via a MediaController. */
+@Singleton
+class PlayerController @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    private val _currentSong = MutableStateFlow<Song?>(null)
+    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    private val _positionMs = MutableStateFlow(0L)
+    val positionMs: StateFlow<Long> = _positionMs.asStateFlow()
+
+    private val _durationMs = MutableStateFlow(0L)
+    val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
+
+    private val _shuffle = MutableStateFlow(false)
+    val shuffle: StateFlow<Boolean> = _shuffle.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
+    val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+
+    private val _sleepTimerMinutes = MutableStateFlow<Int?>(null)
+    val sleepTimerMinutes: StateFlow<Int?> = _sleepTimerMinutes.asStateFlow()
+
+    private var controller: MediaController? = null
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val registry = HashMap<Long, Song>()
+
+    private var sleepRunnable: Runnable? = null
+
+    private val positionPoller = object : Runnable {
+        override fun run() {
+            controller?.let {
+                _positionMs.value = it.currentPosition.coerceAtLeast(0)
+                val duration = it.duration
+                _durationMs.value = if (duration > 0) duration else 0L
+            }
+            if (_isPlaying.value) handler.postDelayed(this, POLL_INTERVAL_MS)
+        }
+    }
+
+    private val listener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _isPlaying.value = isPlaying
+            if (isPlaying) {
+                handler.removeCallbacks(positionPoller)
+                handler.post(positionPoller)
+            }
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            syncCurrentSong()
+            _durationMs.value = (controller?.duration ?: 0L).coerceAtLeast(0L)
+            _positionMs.value = 0L
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _shuffle.value = shuffleModeEnabled
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            _repeatMode.value = repeatMode.toRepeatMode()
+        }
+    }
+
+    /** Must be called once (e.g. from MainActivity) before playback is used. Idempotent. */
+    fun connect() {
+        if (controller != null || controllerFuture != null) return
+        val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        val future = MediaController.Builder(context, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            controller = future.get().also { c ->
+                c.addListener(listener)
+                _shuffle.value = c.shuffleModeEnabled
+                _repeatMode.value = c.repeatMode.toRepeatMode()
+                _isPlaying.value = c.isPlaying
+                syncCurrentSong()
+            }
+        }, MoreExecutors.directExecutor())
+    }
+
+    fun release() {
+        handler.removeCallbacks(positionPoller)
+        controller?.removeListener(listener)
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controllerFuture = null
+        controller = null
+    }
+
+    fun playQueue(songs: List<Song>, startIndex: Int) {
+        val c = controller ?: return
+        if (songs.isEmpty()) return
+        songs.forEach { registry[it.id] = it }
+        c.setMediaItems(songs.map { it.toMediaItem() }, startIndex.coerceIn(0, songs.lastIndex), 0L)
+        c.prepare()
+        c.play()
+    }
+
+    fun togglePlayPause() {
+        val c = controller ?: return
+        if (c.isPlaying) c.pause() else {
+            if (c.playbackState == Player.STATE_IDLE) c.prepare()
+            c.play()
+        }
+    }
+
+    fun next() {
+        controller?.let { if (it.hasNextMediaItem()) it.seekToNextMediaItem() }
+    }
+
+    fun previous() {
+        controller?.seekToPreviousMediaItem()
+    }
+
+    fun seekTo(positionMs: Long) {
+        controller?.seekTo(positionMs)
+        _positionMs.value = positionMs
+    }
+
+    fun toggleShuffle() {
+        val c = controller ?: return
+        c.shuffleModeEnabled = !c.shuffleModeEnabled
+    }
+
+    fun cycleRepeat() {
+        val c = controller ?: return
+        c.repeatMode = when (c.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
+    fun playNext(song: Song) {
+        val c = controller ?: return
+        registry[song.id] = song
+        val index = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
+        c.addMediaItem(index, song.toMediaItem())
+        if (c.mediaItemCount == 1) {
+            c.prepare()
+            c.play()
+        }
+    }
+
+    fun addToQueueEnd(song: Song) {
+        val c = controller ?: return
+        registry[song.id] = song
+        c.addMediaItem(song.toMediaItem())
+        if (c.mediaItemCount == 1) {
+            c.prepare()
+            c.play()
+        }
+    }
+
+    /** [minutes] null cancels any running timer. */
+    fun setSleepTimer(minutes: Int?) {
+        sleepRunnable?.let { handler.removeCallbacks(it) }
+        sleepRunnable = null
+        _sleepTimerMinutes.value = minutes
+        if (minutes != null && minutes > 0) {
+            val runnable = Runnable {
+                controller?.pause()
+                _sleepTimerMinutes.value = null
+                sleepRunnable = null
+            }
+            sleepRunnable = runnable
+            handler.postDelayed(runnable, minutes * 60_000L)
+        }
+    }
+
+    private fun syncCurrentSong() {
+        val c = controller ?: return
+        val mediaId = c.currentMediaItem?.mediaId?.toLongOrNull()
+        _currentSong.value = mediaId?.let { registry[it] }
+    }
+
+    private fun Song.toMediaItem(): MediaItem {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist(artist)
+            .setAlbumTitle(album)
+            .setArtworkUri(artworkUri)
+            .build()
+        return MediaItem.Builder()
+            .setMediaId(id.toString())
+            .setUri(uri)
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
+    private fun Int.toRepeatMode(): RepeatMode = when (this) {
+        Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+        Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+        else -> RepeatMode.OFF
+    }
+
+    companion object {
+        private const val POLL_INTERVAL_MS = 500L
+    }
+}
