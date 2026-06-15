@@ -3,14 +3,17 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Geometric "K" monogram: a vertical stroke plus two angular chevrons. -->
+    <!-- Minimal platinum-white "K" monogram, centered within the adaptive safe zone. -->
+    <!-- Vertical stem -->
     <path
-        android:fillColor="#1ED760"
-        android:pathData="M22.5,18 L40.5,18 L40.5,90 L22.5,90 Z" />
+        android:fillColor="#F4F4F6"
+        android:pathData="M36,30 L48,30 L48,78 L36,78 Z" />
+    <!-- Upper arm -->
     <path
-        android:fillColor="#00C2FF"
-        android:pathData="M40.5,40.5 L90,13.5 L90,31.5 L40.5,58.5 Z" />
+        android:fillColor="#F4F4F6"
+        android:pathData="M48,54 L66,30 L78,30 L48,42 Z" />
+    <!-- Lower arm -->
     <path
-        android:fillColor="#1DB954"
-        android:pathData="M40.5,49.5 L90,76.5 L90,94.5 L40.5,67.5 Z" />
+        android:fillColor="#F4F4F6"
+        android:pathData="M48,54 L66,78 L78,78 L48,66 Z" />
 </vector>
