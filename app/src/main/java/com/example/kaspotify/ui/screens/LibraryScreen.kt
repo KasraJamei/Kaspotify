@@ -3,12 +3,15 @@ package com.example.kaspotify.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
@@ -37,11 +41,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -60,6 +68,7 @@ import com.example.kaspotify.ui.components.SongRow
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
+import kotlinx.coroutines.launch
 
 private val tabs = listOf("Songs", "Albums", "Artists", "Favorites")
 
@@ -174,11 +183,16 @@ fun LibraryScreen(
             }
         }
 
+        // The A–Z fast-scroll index only makes sense when the list is sorted alphabetically by title.
+        val alphabetIndex = sortMode == SortMode.TITLE_ASC || sortMode == SortMode.TITLE_DESC
         when (selectedTab) {
-            0 -> SongList(sortedSongs, currentId, viewModel, onMore)
+            0 -> SongList(sortedSongs, currentId, viewModel, onMore, showAlphabetIndex = alphabetIndex)
             1 -> AlbumList(albums) { album -> onOpenAlbum(album.id) }
             2 -> ArtistList(artists) { artist -> onOpenArtist(artist.name) }
-            else -> SongList(sortedFavorites, currentId, viewModel, onMore, emptyText = "No favorites yet")
+            else -> SongList(
+                sortedFavorites, currentId, viewModel, onMore,
+                emptyText = "No favorites yet", showAlphabetIndex = alphabetIndex
+            )
         }
     }
 }
@@ -332,25 +346,101 @@ private fun SongList(
     currentId: Long?,
     viewModel: MusicViewModel,
     onMore: (Song) -> Unit,
-    emptyText: String = "No songs found"
+    emptyText: String = "No songs found",
+    showAlphabetIndex: Boolean = false
 ) {
     if (songs.isEmpty()) {
         EmptyState(emptyText)
         return
     }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)
+        ) {
+            items(songs, key = { it.id }) { song ->
+                SongRow(
+                    song = song,
+                    isCurrent = song.id == currentId,
+                    onClick = { viewModel.playSong(song, songs) },
+                    onToggleFavorite = { viewModel.toggleFavorite(song) },
+                    onMore = { onMore(song) },
+                    onPlayNext = { viewModel.playNext(song) },
+                    onAddToQueue = { viewModel.addToQueue(song) }
+                )
+            }
+        }
+        if (showAlphabetIndex && songs.size > 10) {
+            AlphabetIndex(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp)
+            ) { letter ->
+                val target = songs.indexOfFirst { sectionLetter(it.title) == letter }
+                if (target >= 0) scope.launch { listState.scrollToItem(target) }
+            }
+        }
+    }
+}
+
+/** Maps a title to its index "section": A–Z for alphabetic, '#' for everything else. */
+private fun sectionLetter(title: String): Char {
+    val c = title.trimStart().firstOrNull()?.uppercaseChar() ?: '#'
+    return if (c in 'A'..'Z') c else '#'
+}
+
+/**
+ * A vertical #/A–Z fast-scroll rail pinned to the right edge. Tap or drag along it to jump the list
+ * to the first song in that letter's section.
+ */
+@Composable
+private fun AlphabetIndex(
+    modifier: Modifier = Modifier,
+    onLetter: (Char) -> Unit
+) {
+    val letters = remember { listOf('#') + ('A'..'Z').toList() }
+    var heightPx by remember { mutableIntStateOf(1) }
+    var lastLetter by remember { mutableStateOf<Char?>(null) }
+
+    fun pickAt(y: Float) {
+        val idx = ((y / heightPx) * letters.size).toInt().coerceIn(0, letters.lastIndex)
+        val letter = letters[idx]
+        if (letter != lastLetter) {
+            lastLetter = letter
+            onLetter(letter)
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(22.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(GlassFill)
+            .onSizeChanged { heightPx = it.height.coerceAtLeast(1) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { offset -> pickAt(offset.y) },
+                    onDragEnd = { lastLetter = null },
+                    onVerticalDrag = { change, _ -> pickAt(change.position.y) }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTapGestures { offset -> pickAt(offset.y) }
+            },
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        items(songs, key = { it.id }) { song ->
-            SongRow(
-                song = song,
-                isCurrent = song.id == currentId,
-                onClick = { viewModel.playSong(song, songs) },
-                onToggleFavorite = { viewModel.toggleFavorite(song) },
-                onMore = { onMore(song) },
-                onPlayNext = { viewModel.playNext(song) },
-                onAddToQueue = { viewModel.addToQueue(song) }
+        letters.forEach { ch ->
+            Text(
+                text = ch.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
     }
