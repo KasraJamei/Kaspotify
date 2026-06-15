@@ -11,7 +11,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +27,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Equalizer
@@ -45,7 +53,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,8 +63,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +77,9 @@ import com.example.kaspotify.ui.MusicViewModel
 import com.example.kaspotify.ui.components.Artwork
 import com.example.kaspotify.ui.components.QualityBadge
 import com.example.kaspotify.ui.components.VisualizerView
+import com.example.kaspotify.ui.theme.GlassFill
+import com.example.kaspotify.ui.theme.GlassStroke
+import com.example.kaspotify.ui.theme.LocalAmbientColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -96,76 +109,64 @@ fun NowPlayingScreen(
     val recordAudioPermission = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO)
 
     val current = song
+    val ambient = LocalAmbientColor.current
+    val base = MaterialTheme.colorScheme.background
 
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(base)
+            .background(
+                Brush.verticalGradient(
+                    0f to ambient.copy(alpha = 0.85f).compositeOver(base),
+                    0.5f to ambient.copy(alpha = 0.30f).compositeOver(base),
+                    1f to base
+                )
+            )
+    ) {
         if (current == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Nothing playing", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            return@Surface
+            return@Box
         }
 
-        // Local scrub state so the thumb tracks the finger smoothly.
         var scrubbing by remember { mutableStateOf(false) }
         var scrubValue by remember { mutableStateOf(0f) }
         val effectiveDuration = if (durationMs > 0) durationMs else current.durationMs
         val sliderValue = if (scrubbing) scrubValue
         else if (effectiveDuration > 0) positionMs.toFloat() / effectiveDuration else 0f
 
-        val accent = MaterialTheme.colorScheme.primary
-        val backgroundBrush = remember(accent) {
-            Brush.verticalGradient(listOf(accent.copy(alpha = 0.25f), Color.Transparent))
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
         ) {
+            // Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onCollapse) {
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Collapse")
                 }
-                Text("Now Playing", style = MaterialTheme.typography.titleMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {
-                        if (visualizerEnabled) {
-                            viewModel.setVisualizerEnabled(false)
-                        } else if (recordAudioPermission.status.isGranted) {
-                            viewModel.setVisualizerEnabled(true)
-                        } else {
-                            recordAudioPermission.launchPermissionRequest()
-                        }
-                    }) {
-                        Icon(
-                            Icons.Filled.GraphicEq,
-                            contentDescription = "Visualizer",
-                            tint = if (visualizerEnabled) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onOpenEffects) {
-                        Icon(Icons.Filled.Speed, contentDescription = "Effects")
-                    }
-                    IconButton(onClick = onOpenQueue) {
-                        Icon(Icons.Filled.QueueMusic, contentDescription = "Queue")
-                    }
-                    IconButton(onClick = onOpenEqualizer) {
-                        Icon(Icons.Filled.Equalizer, contentDescription = "Equalizer")
-                    }
-                    SleepTimerMenu(
-                        selected = sleepTimer,
-                        onSelect = viewModel::setSleepTimer
-                    )
+                Text(
+                    "NOW PLAYING",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                IconButton(onClick = onOpenQueue) {
+                    Icon(Icons.Filled.QueueMusic, contentDescription = "Queue")
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
+
+            // Hero artwork
             var heartPop by remember { mutableStateOf(false) }
             val heartScale by animateFloatAsState(
                 targetValue = if (heartPop) 1f else 0f,
@@ -176,7 +177,7 @@ fun NowPlayingScreen(
             )
             var artworkVisible by remember(current.id) { mutableStateOf(false) }
             val artworkScale by animateFloatAsState(
-                targetValue = if (artworkVisible) 1f else 0.85f,
+                targetValue = if (artworkVisible) 1f else 0.88f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
                 label = "artworkEntrance"
             )
@@ -189,6 +190,9 @@ fun NowPlayingScreen(
                     .graphicsLayer {
                         scaleX = artworkScale
                         scaleY = artworkScale
+                        shadowElevation = 24f
+                        shape = RoundedCornerShape(20.dp)
+                        clip = false
                     }
                     .pointerInput(current.id) {
                         detectTapGestures(
@@ -201,8 +205,8 @@ fun NowPlayingScreen(
             ) {
                 Artwork(
                     uri = current.artworkUri,
-                    size = 320.dp,
-                    cornerRadius = 12.dp,
+                    size = 360.dp,
+                    cornerRadius = 20.dp,
                     modifier = Modifier.fillMaxSize()
                 )
                 if (heartScale > 0f) {
@@ -212,7 +216,7 @@ fun NowPlayingScreen(
                         tint = Color.White,
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .size(96.dp)
+                            .size(110.dp)
                             .graphicsLayer {
                                 scaleX = heartScale
                                 scaleY = heartScale
@@ -221,12 +225,15 @@ fun NowPlayingScreen(
                     )
                 }
             }
+
             if (visualizerEnabled) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
                 VisualizerView(waveform = waveform, modifier = Modifier.fillMaxWidth())
             }
-            Spacer(Modifier.height(24.dp))
 
+            Spacer(Modifier.height(28.dp))
+
+            // Title + favorite
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -234,20 +241,24 @@ fun NowPlayingScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         current.title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        current.artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (current.qualityLabel.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
-                        QualityBadge(current)
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            current.artist,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (current.qualityLabel.isNotEmpty()) {
+                            Spacer(Modifier.size(8.dp))
+                            QualityBadge(current)
+                        }
                     }
                 }
                 IconButton(onClick = { viewModel.toggleFavorite(current) }) {
@@ -261,6 +272,9 @@ fun NowPlayingScreen(
                 }
             }
 
+            Spacer(Modifier.height(8.dp))
+
+            // Seek bar
             Slider(
                 value = sliderValue.coerceIn(0f, 1f),
                 onValueChange = {
@@ -272,7 +286,12 @@ fun NowPlayingScreen(
                     if (effectiveDuration > 0) {
                         viewModel.seekTo((scrubValue * effectiveDuration).toLong())
                     }
-                }
+                },
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = GlassStroke
+                )
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -291,10 +310,12 @@ fun NowPlayingScreen(
             }
 
             Spacer(Modifier.height(8.dp))
+
+            // Transport
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = viewModel::toggleShuffle) {
                     Icon(
@@ -305,41 +326,34 @@ fun NowPlayingScreen(
                     )
                 }
                 IconButton(onClick = viewModel::previous) {
-                    Icon(
-                        Icons.Filled.SkipPrevious,
-                        contentDescription = "Previous",
-                        modifier = Modifier.size(36.dp)
-                    )
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(40.dp))
                 }
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    modifier = Modifier.size(64.dp)
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = viewModel::togglePlayPause),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(onClick = viewModel::togglePlayPause) {
-                        AnimatedContent(
-                            targetState = isPlaying,
-                            transitionSpec = {
-                                (scaleIn(tween(150)) + fadeIn(tween(150))) togetherWith
-                                    (scaleOut(tween(150)) + fadeOut(tween(150)))
-                            },
-                            label = "nowPlayingPlayPause"
-                        ) { playing ->
-                            Icon(
-                                imageVector = if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                contentDescription = if (playing) "Pause" else "Play",
-                                tint = Color.Black,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
+                    AnimatedContent(
+                        targetState = isPlaying,
+                        transitionSpec = {
+                            (scaleIn(tween(150)) + fadeIn(tween(150))) togetherWith
+                                (scaleOut(tween(150)) + fadeOut(tween(150)))
+                        },
+                        label = "nowPlayingPlayPause"
+                    ) { playing ->
+                        Icon(
+                            imageVector = if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (playing) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(38.dp)
+                        )
                     }
                 }
                 IconButton(onClick = viewModel::next) {
-                    Icon(
-                        Icons.Filled.SkipNext,
-                        contentDescription = "Next",
-                        modifier = Modifier.size(36.dp)
-                    )
+                    Icon(Icons.Filled.SkipNext, contentDescription = "Next", modifier = Modifier.size(40.dp))
                 }
                 IconButton(onClick = viewModel::cycleRepeat) {
                     Icon(
@@ -351,22 +365,71 @@ fun NowPlayingScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Secondary actions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ActionChip(
+                    icon = Icons.Filled.GraphicEq,
+                    label = "Visualizer",
+                    active = visualizerEnabled,
+                    onClick = {
+                        if (visualizerEnabled) viewModel.setVisualizerEnabled(false)
+                        else if (recordAudioPermission.status.isGranted) viewModel.setVisualizerEnabled(true)
+                        else recordAudioPermission.launchPermissionRequest()
+                    }
+                )
+                ActionChip(Icons.Filled.Equalizer, "EQ", false, onOpenEqualizer)
+                ActionChip(Icons.Filled.Speed, "Effects", false, onOpenEffects)
+                SleepTimerChip(selected = sleepTimer, onSelect = viewModel::setSleepTimer)
+            }
+
+            Spacer(Modifier.height(10.dp))
         }
     }
 }
 
 @Composable
-private fun SleepTimerMenu(selected: Int?, onSelect: (Int?) -> Unit) {
+private fun ActionChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(percent = 50)
+    val tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(shape)
+                .background(GlassFill)
+                .border(1.dp, GlassStroke, shape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = tint)
+    }
+}
+
+@Composable
+private fun SleepTimerChip(selected: Int?, onSelect: (Int?) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                Icons.Filled.Bedtime,
-                contentDescription = "Sleep timer",
-                tint = if (selected != null) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        ActionChip(
+            icon = Icons.Filled.Bedtime,
+            label = selected?.let { "${it}m" } ?: "Timer",
+            active = selected != null,
+            onClick = { expanded = true }
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             sleepOptions.forEach { minutes ->
                 DropdownMenuItem(

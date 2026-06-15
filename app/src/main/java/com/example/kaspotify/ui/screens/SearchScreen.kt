@@ -50,8 +50,8 @@ fun SearchScreen(
     Column(modifier = modifier.fillMaxSize()) {
         Text(
             "Search",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
+            style = MaterialTheme.typography.displaySmall,
+            modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 12.dp)
         )
         OutlinedTextField(
             value = query,
@@ -69,6 +69,13 @@ fun SearchScreen(
                 }
             },
             singleLine = true,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(percent = 50),
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = com.example.kaspotify.ui.theme.GlassStroke,
+                unfocusedBorderColor = com.example.kaspotify.ui.theme.GlassStroke,
+                focusedContainerColor = com.example.kaspotify.ui.theme.GlassFill,
+                unfocusedContainerColor = com.example.kaspotify.ui.theme.GlassFill
+            ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {
                 viewModel.recordSearch(query)

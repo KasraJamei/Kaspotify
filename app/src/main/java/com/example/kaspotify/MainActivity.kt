@@ -28,8 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kaspotify.ui.AppScaffold
 import com.example.kaspotify.ui.MusicViewModel
 import com.example.kaspotify.ui.theme.KaspotifyTheme
+import com.example.kaspotify.ui.theme.asAmbient
 import com.example.kaspotify.ui.theme.rememberArtworkAccentColor
-import com.example.kaspotify.ui.theme.rememberIdleAccentColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -45,10 +45,9 @@ class MainActivity : ComponentActivity() {
             val viewModel: MusicViewModel = hiltViewModel()
             val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
             val artworkAccent by rememberArtworkAccentColor(currentSong?.artworkUri)
-            // When nothing is playing (or art has no usable color), drift through a resting palette.
-            val idleAccent = rememberIdleAccentColor()
-            val accentColor = if (currentSong != null) artworkAccent ?: idleAccent else idleAccent
-            KaspotifyTheme(accentColor = accentColor) {
+            // The accent stays platinum; the art color only feeds the ambient gradient backdrop.
+            val ambientColor = artworkAccent?.asAmbient()
+            KaspotifyTheme(ambientColor = ambientColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

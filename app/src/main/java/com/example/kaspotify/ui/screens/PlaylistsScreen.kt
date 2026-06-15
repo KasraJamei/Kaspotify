@@ -1,5 +1,7 @@
 package com.example.kaspotify.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,7 +66,7 @@ fun PlaylistsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Playlists", style = MaterialTheme.typography.headlineMedium)
+            Text("Playlists", style = MaterialTheme.typography.displaySmall)
             Row {
                 IconButton(onClick = { showBuilder = true }) {
                     Icon(Icons.Filled.AutoAwesome, contentDescription = "Smart playlist")
@@ -174,26 +177,27 @@ private fun MadeForYouCard(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(10.dp),
+    val shape = RoundedCornerShape(16.dp)
+    Column(
         modifier = Modifier
-            .width(132.dp)
+            .width(140.dp)
+            .clip(shape)
+            .background(com.example.kaspotify.ui.theme.GlassFill)
+            .border(1.dp, com.example.kaspotify.ui.theme.GlassStroke, shape)
             .clickable(onClick = onClick)
+            .padding(14.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.size(10.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2
-            )
-        }
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.size(10.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2
+        )
     }
 }
 

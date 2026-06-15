@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -27,9 +28,11 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.kaspotify.data.model.Song
+import com.example.kaspotify.ui.theme.GlassFill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,73 +61,81 @@ fun SongRow(
         state = dismissState,
         modifier = modifier,
         backgroundContent = {
+            // Only paint a glass reveal while actually swiping; otherwise stay transparent so the
+            // gradient backdrop shows through the list.
             val (icon, alignment) = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.StartToEnd -> Icons.Filled.QueueMusic to Alignment.CenterStart
                 SwipeToDismissBoxValue.EndToStart -> Icons.Filled.QueuePlayNext to Alignment.CenterEnd
                 SwipeToDismissBoxValue.Settled -> null to Alignment.Center
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = alignment
-            ) {
-                if (icon != null) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(GlassFill)
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = alignment
+                ) {
                     Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
     ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Artwork(uri = song.artworkUri, size = 48.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isCurrent) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        val rowShape = RoundedCornerShape(16.dp)
+        val highlight = if (isCurrent) GlassFill else androidx.compose.ui.graphics.Color.Transparent
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+                .clip(rowShape)
+                .background(highlight)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Artwork(uri = song.artworkUri, size = 50.dp, cornerRadius = 10.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (song.qualityLabel.isNotEmpty()) {
-                    Spacer(Modifier.width(6.dp))
-                    QualityBadge(song)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (song.qualityLabel.isNotEmpty()) {
+                        Spacer(Modifier.width(6.dp))
+                        QualityBadge(song)
+                    }
                 }
             }
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (song.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (song.isFavorite) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onMore) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-        IconButton(onClick = onToggleFavorite) {
-            Icon(
-                imageVector = if (song.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = "Favorite",
-                tint = if (song.isFavorite) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        IconButton(onClick = onMore) {
-            Icon(
-                imageVector = Icons.Filled.MoreVert,
-                contentDescription = "More",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
     }
 }
