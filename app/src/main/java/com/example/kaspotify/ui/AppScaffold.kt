@@ -1,5 +1,6 @@
 package com.example.kaspotify.ui
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.QueuePlayNext
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -60,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kaspotify.data.model.Song
@@ -421,6 +424,7 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     var pickingPlaylist by remember { mutableStateOf(false) }
     var showingDetails by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -444,6 +448,9 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
                 }
                 SheetAction(Icons.Filled.PlaylistAdd, "Add to playlist") {
                     pickingPlaylist = true
+                }
+                SheetAction(Icons.Filled.Share, "Share") {
+                    shareSong(context, song); onDismiss()
                 }
                 SheetAction(Icons.Filled.Info, "Details") {
                     showingDetails = true
@@ -478,6 +485,27 @@ private fun MoreSheet(song: Song, viewModel: MusicViewModel, onDismiss: () -> Un
             }
         }
     }
+}
+
+/**
+ * Shares the track's audio file to other apps via the system chooser. Uses the song's MediaStore
+ * content URI as the stream and grants temporary read permission to the receiving app, with a
+ * "Title — Artist" text/subject fallback for apps that only take text.
+ */
+private fun shareSong(context: android.content.Context, song: Song) {
+    val caption = "${song.title} — ${song.artist}"
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = song.mimeType.ifEmpty { "audio/*" }
+        putExtra(Intent.EXTRA_STREAM, song.uri)
+        putExtra(Intent.EXTRA_SUBJECT, caption)
+        putExtra(Intent.EXTRA_TITLE, song.title)
+        putExtra(Intent.EXTRA_TEXT, caption)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    val chooser = Intent.createChooser(send, "Share song").apply {
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(chooser)
 }
 
 @Composable
