@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kaspotify.data.model.Playlist
 import com.example.kaspotify.data.model.QualityTier
 import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.ui.MusicViewModel
@@ -58,6 +59,7 @@ fun PlaylistsScreen(
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     var showNewDialog by remember { mutableStateOf(false) }
     var showBuilder by remember { mutableStateOf(false) }
+    var playlistToDelete by remember { mutableStateOf<Playlist?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -142,7 +144,7 @@ fun PlaylistsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
+                        IconButton(onClick = { playlistToDelete = playlist }) {
                             Icon(
                                 Icons.Filled.Delete,
                                 contentDescription = "Delete",
@@ -168,6 +170,22 @@ fun PlaylistsScreen(
         SmartPlaylistBuilderDialog(
             viewModel = viewModel,
             onDismiss = { showBuilder = false }
+        )
+    }
+    playlistToDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { playlistToDelete = null },
+            title = { Text("Delete playlist?") },
+            text = { Text("\"${target.name}\" will be removed. The songs stay in your library.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deletePlaylist(target.id)
+                    playlistToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { playlistToDelete = null }) { Text("Cancel") }
+            }
         )
     }
 }

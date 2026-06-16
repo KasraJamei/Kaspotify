@@ -398,7 +398,16 @@ private fun AlphabetIndex(
                     )
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures { offset -> pickAt(offset.y) }
+                    // Use onPress/tryAwaitRelease so a tap highlights the letter while held and then
+                    // clears on lift — otherwise a tapped letter (and its bubble) stayed stuck until
+                    // the next drag.
+                    detectTapGestures(
+                        onPress = { offset ->
+                            pickAt(offset.y)
+                            tryAwaitRelease()
+                            activeLetter = null
+                        }
+                    )
                 },
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally

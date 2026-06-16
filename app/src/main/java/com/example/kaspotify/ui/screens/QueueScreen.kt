@@ -90,8 +90,14 @@ fun QueueScreen(
         var draggingIndex by remember { mutableStateOf(-1) }
         var dragOffset by remember { mutableStateOf(0f) }
 
+        // Show only the now-playing track and what's up next — not the already-played history that
+        // makes the whole library look like it's "in the queue".
+        val startIndex = queueIndex.coerceIn(0, queue.lastIndex)
+        val upNext = queue.drop(startIndex)
+
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            itemsIndexed(queue, key = { _, song -> song.id }) { index, song ->
+            itemsIndexed(upNext, key = { _, song -> song.id }) { localIndex, song ->
+                val index = startIndex + localIndex
                 val isDragging = index == draggingIndex
                 val dismissState = rememberSwipeToDismissBoxState(
                     confirmValueChange = { value ->
@@ -179,7 +185,7 @@ fun QueueScreen(
                                         val moveBy = (dragOffset / itemHeightPx).roundToInt()
                                         if (moveBy != 0) {
                                             val target = (draggingIndex + moveBy)
-                                                .coerceIn(0, queue.lastIndex)
+                                                .coerceIn(startIndex, queue.lastIndex)
                                             if (target != draggingIndex) {
                                                 viewModel.moveQueueItem(draggingIndex, target)
                                                 draggingIndex = target

@@ -1,16 +1,19 @@
 package com.example.kaspotify.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -266,13 +269,19 @@ fun NowPlayingScreen(
                 }
             }
 
-            if (visualizerEnabled) {
-                Spacer(Modifier.height(14.dp))
-                VisualizerView(
-                    bars = viewModel.visualizer.bars,
-                    pulse = viewModel.visualizer.pulse,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            AnimatedVisibility(
+                visible = visualizerEnabled,
+                enter = expandVertically(spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(tween(280)),
+                exit = shrinkVertically(tween(200)) + fadeOut(tween(140))
+            ) {
+                Column {
+                    Spacer(Modifier.height(14.dp))
+                    VisualizerView(
+                        bars = viewModel.visualizer.bars,
+                        pulse = viewModel.visualizer.pulse,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             Spacer(Modifier.height(28.dp))
@@ -299,7 +308,7 @@ fun NowPlayingScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        if (current.qualityLabel.isNotEmpty()) {
+                        if (current.qualityLabel.isNotEmpty() && LocalAppSettings.current.showQualityBadges) {
                             Spacer(Modifier.size(8.dp))
                             QualityBadge(current)
                         }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Replay
@@ -111,6 +112,14 @@ fun SettingsScreen(
             subtitle = "Show the Slowed + Reverb effects control",
             checked = settings.audioEffects,
             onChange = viewModel::setAudioEffects
+        )
+
+        SettingToggle(
+            icon = Icons.Filled.HighQuality,
+            title = "Show quality badges",
+            subtitle = "Display Lossless / 320 kbps tags on songs",
+            checked = settings.showQualityBadges,
+            onChange = viewModel::setShowQualityBadges
         )
 
         SectionLabel("Interaction")

@@ -26,8 +26,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.kaspotify.data.model.Song
@@ -50,6 +53,8 @@ fun MiniPlayer(
     progress: Float,
     onTogglePlay: () -> Unit,
     onToggleLike: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -102,15 +107,19 @@ fun MiniPlayer(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onToggleLike) {
-                    Icon(
-                        imageVector = if (song.isFavorite) Icons.Filled.Favorite
-                        else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (song.isFavorite) "Unlike" else "Like",
-                        tint = if (song.isFavorite) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                BarIcon(
+                    icon = if (song.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (song.isFavorite) "Unlike" else "Like",
+                    tint = if (song.isFavorite) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = onToggleLike
+                )
+                BarIcon(
+                    icon = Icons.Filled.SkipPrevious,
+                    contentDescription = "Previous",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = onPrevious
+                )
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -135,6 +144,12 @@ fun MiniPlayer(
                         )
                     }
                 }
+                BarIcon(
+                    icon = Icons.Filled.SkipNext,
+                    contentDescription = "Next",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = onNext
+                )
             }
             // Thin progress hairline along the bottom edge.
             Box(
@@ -154,5 +169,29 @@ fun MiniPlayer(
             }
             Spacer(Modifier.height(6.dp))
         }
+    }
+}
+
+/** A compact, evenly-sized tappable icon for the mini-player's control row. */
+@Composable
+private fun BarIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }

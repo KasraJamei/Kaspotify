@@ -17,6 +17,8 @@ data class AppSettings(
     val listSwipeGestures: Boolean = true,
     val audioEffects: Boolean = true,
     val visualizer: Boolean = true,
+    /** Whether per-song quality badges (Lossless, 320 kbps, …) are shown in lists and Now Playing. */
+    val showQualityBadges: Boolean = true,
     /** Whether the first-launch welcome guide has been shown/dismissed. */
     val onboardingSeen: Boolean = false,
     /** Whether the interactive coach-mark tour has been shown/dismissed. */
@@ -44,6 +46,7 @@ class SettingsRepository @Inject constructor(
         listSwipeGestures = prefs.getBoolean(KEY_SWIPE, true),
         audioEffects = prefs.getBoolean(KEY_EFFECTS, true),
         visualizer = prefs.getBoolean(KEY_VISUALIZER, true),
+        showQualityBadges = prefs.getBoolean(KEY_QUALITY_BADGES, true),
         onboardingSeen = prefs.getBoolean(KEY_ONBOARDING, false),
         tourSeen = prefs.getBoolean(KEY_TOUR, false)
     )
@@ -59,6 +62,7 @@ class SettingsRepository @Inject constructor(
     fun setListSwipeGestures(v: Boolean) = put(KEY_SWIPE, v) { it.copy(listSwipeGestures = v) }
     fun setAudioEffects(v: Boolean) = put(KEY_EFFECTS, v) { it.copy(audioEffects = v) }
     fun setVisualizer(v: Boolean) = put(KEY_VISUALIZER, v) { it.copy(visualizer = v) }
+    fun setShowQualityBadges(v: Boolean) = put(KEY_QUALITY_BADGES, v) { it.copy(showQualityBadges = v) }
     fun setOnboardingSeen(v: Boolean) = put(KEY_ONBOARDING, v) { it.copy(onboardingSeen = v) }
     fun setTourSeen(v: Boolean) = put(KEY_TOUR, v) { it.copy(tourSeen = v) }
 
@@ -69,6 +73,7 @@ class SettingsRepository @Inject constructor(
         const val KEY_SWIPE = "list_swipe_gestures"
         const val KEY_EFFECTS = "audio_effects"
         const val KEY_VISUALIZER = "visualizer"
+        const val KEY_QUALITY_BADGES = "show_quality_badges"
         const val KEY_ONBOARDING = "onboarding_seen"
         const val KEY_TOUR = "tour_seen"
     }

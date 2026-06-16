@@ -57,6 +57,7 @@ class MusicViewModel @Inject constructor(
     fun setListSwipeGestures(v: Boolean) = settingsRepository.setListSwipeGestures(v)
     fun setAudioEffects(v: Boolean) = settingsRepository.setAudioEffects(v)
     fun setVisualizerAvailable(v: Boolean) = settingsRepository.setVisualizer(v)
+    fun setShowQualityBadges(v: Boolean) = settingsRepository.setShowQualityBadges(v)
     fun setOnboardingSeen(v: Boolean) = settingsRepository.setOnboardingSeen(v)
     fun setTourSeen(v: Boolean) = settingsRepository.setTourSeen(v)
 

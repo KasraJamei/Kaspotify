@@ -138,7 +138,7 @@ private fun SongRowContent(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (song.qualityLabel.isNotEmpty()) {
+                    if (song.qualityLabel.isNotEmpty() && LocalAppSettings.current.showQualityBadges) {
                         Spacer(Modifier.width(6.dp))
                         QualityBadge(song)
                     }
