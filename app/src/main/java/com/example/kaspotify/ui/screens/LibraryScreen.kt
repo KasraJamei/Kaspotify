@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +30,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,9 +65,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,10 +78,10 @@ import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.ui.MusicViewModel
 import com.example.kaspotify.ui.components.Artwork
 import com.example.kaspotify.ui.components.SongRow
+import com.example.kaspotify.ui.components.niagaraPage
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassFillStrong
 import com.example.kaspotify.ui.theme.GlassStroke
-import com.example.kaspotify.ui.theme.LocalAmbientColor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -91,71 +92,19 @@ enum class SmartPlaylistType(val title: String, val icon: ImageVector) {
     MOST_PLAYED("Most Played", Icons.Filled.Whatshot)
 }
 
-@Composable
-private fun SmartPlaylistCards(onOpen: (SmartPlaylistType) -> Unit) {
-    val ambient = LocalAmbientColor.current
-    val surface = MaterialTheme.colorScheme.surface
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(SmartPlaylistType.entries.toList(), key = { it.name }) { type ->
-            val shape = RoundedCornerShape(18.dp)
-            Column(
-                modifier = Modifier
-                    .width(150.dp)
-                    .height(110.dp)
-                    .clip(shape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                ambient.copy(alpha = 0.45f).compositeOver(surface),
-                                ambient.copy(alpha = 0.12f).compositeOver(surface)
-                            )
-                        )
-                    )
-                    .border(1.dp, GlassStroke, shape)
-                    .clickable { onOpen(type) }
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(GlassFill),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        type.icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Text(
-                    type.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     viewModel: MusicViewModel,
     onMore: (Song) -> Unit,
     onOpenAlbum: (Long) -> Unit,
     onOpenArtist: (String) -> Unit,
-    onOpenSmartPlaylist: (SmartPlaylistType) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+    val scope = rememberCoroutineScope()
+    val selectedTab = pagerState.currentPage
     var sortOrdinal by rememberSaveable { mutableIntStateOf(0) }
     val sortMode = SortMode.entries[sortOrdinal]
     val songs by viewModel.songs.collectAsStateWithLifecycle()
@@ -167,6 +116,8 @@ fun LibraryScreen(
 
     val sortedSongs = remember(songs, sortMode) { sortMode.sort(songs) }
     val sortedFavorites = remember(favorites, sortMode) { sortMode.sort(favorites) }
+    // The A–Z fast-scroll index only makes sense when the list is sorted alphabetically by title.
+    val alphabetIndex = sortMode == SortMode.TITLE_ASC || sortMode == SortMode.TITLE_DESC
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -177,21 +128,16 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             HomeWordmark()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            IconButton(onClick = onOpenSettings) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        SmartPlaylistCards(onOpenSmartPlaylist)
-        Spacer(Modifier.height(8.dp))
-
-        PillTabs(selectedTab) { selectedTab = it }
+        PillTabs(selectedTab) { idx -> scope.launch { pagerState.animateScrollToPage(idx) } }
 
         // Sort/filter applies to the song lists (Songs & Favorites).
         if (selectedTab == 0 || selectedTab == 3) {
@@ -206,16 +152,25 @@ fun LibraryScreen(
             }
         }
 
-        // The A–Z fast-scroll index only makes sense when the list is sorted alphabetically by title.
-        val alphabetIndex = sortMode == SortMode.TITLE_ASC || sortMode == SortMode.TITLE_DESC
-        when (selectedTab) {
-            0 -> SongList(sortedSongs, currentId, viewModel, onMore, showAlphabetIndex = alphabetIndex)
-            1 -> AlbumList(albums) { album -> onOpenAlbum(album.id) }
-            2 -> ArtistList(artists) { artist -> onOpenArtist(artist.name) }
-            else -> SongList(
-                sortedFavorites, currentId, viewModel, onMore,
-                emptyText = "No favorites yet", showAlphabetIndex = alphabetIndex
-            )
+        // Swipe horizontally to move between Songs / Albums / Artists / Favorites. This nested pager
+        // consumes the horizontal gesture, so swiping a category no longer falls through to the
+        // top-level Home / Search / Playlists pager.
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            key = { it }
+        ) { page ->
+            Box(Modifier.fillMaxSize().niagaraPage(pagerState, page)) {
+                when (page) {
+                    0 -> SongList(sortedSongs, currentId, viewModel, onMore, showAlphabetIndex = alphabetIndex)
+                    1 -> AlbumList(albums) { album -> onOpenAlbum(album.id) }
+                    2 -> ArtistList(artists) { artist -> onOpenArtist(artist.name) }
+                    else -> SongList(
+                        sortedFavorites, currentId, viewModel, onMore,
+                        emptyText = "No favorites yet", showAlphabetIndex = alphabetIndex
+                    )
+                }
+            }
         }
     }
 }

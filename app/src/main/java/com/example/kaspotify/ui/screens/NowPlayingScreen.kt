@@ -178,16 +178,23 @@ fun NowPlayingScreen(
             // true => a "like" just happened (heart pops & drifts up); false => an "unlike" (broken
             // heart drifts down). Drives which glyph the burst overlay shows.
             var heartIsLike by remember { mutableStateOf(true) }
+            // Optimistic like state: flips instantly on tap so rapid double-taps toggle deterministically,
+            // instead of reading the favorite flag back from a Flow that lags a frame (which made the
+            // heart jump to a random fully-liked/unliked state). Re-syncs if it changes elsewhere.
+            var liked by remember(current.id) { mutableStateOf(current.isFavorite) }
+            LaunchedEffect(current.id, current.isFavorite) { liked = current.isFavorite }
             val heartAnim = remember { Animatable(0f) }
             LaunchedEffect(heartTrigger) {
                 if (heartTrigger == 0) return@LaunchedEffect
                 heartAnim.snapTo(0f)
                 heartAnim.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
             }
-            // Toggling via the heart button shows like *or* dislike depending on the new state.
+            // Toggling flips the optimistic flag and sets that exact target (like/unlike).
             val toggleLike: () -> Unit = {
-                heartIsLike = !current.isFavorite
-                viewModel.toggleFavorite(current)
+                val newLiked = !liked
+                liked = newLiked
+                heartIsLike = newLiked
+                viewModel.setFavorite(current, newLiked)
                 heartTrigger++
             }
             var artworkVisible by remember(current.id) { mutableStateOf(false) }
@@ -300,10 +307,10 @@ fun NowPlayingScreen(
                 }
                 IconButton(onClick = toggleLike) {
                     Icon(
-                        imageVector = if (current.isFavorite) Icons.Filled.Favorite
+                        imageVector = if (liked) Icons.Filled.Favorite
                         else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (current.isFavorite) "Unlike" else "Like",
-                        tint = if (current.isFavorite) MaterialTheme.colorScheme.primary
+                        contentDescription = if (liked) "Unlike" else "Like",
+                        tint = if (liked) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

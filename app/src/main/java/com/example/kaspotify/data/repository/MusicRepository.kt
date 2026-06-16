@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,11 +83,24 @@ class MusicRepository @Inject constructor(
         scannedSongs.value = importer.scan()
     }
 
-    suspend fun toggleFavorite(song: Song) {
+    // Serializes favorite writes so rapid taps (e.g. double-tap like/unlike) can't race a
+    // read-modify-write and land on a non-deterministic state.
+    private val favoriteMutex = Mutex()
+
+    suspend fun toggleFavorite(song: Song) = favoriteMutex.withLock {
         val current = dao.getState(song.id)
         val updated = (current ?: SongStateEntity(songId = song.id))
             .copy(isFavorite = !(current?.isFavorite ?: false))
         dao.upsertState(updated)
+    }
+
+    /**
+     * Sets an explicit favorite state (idempotent). Preferred for double-tap, which needs a
+     * deterministic result under fast taps rather than a toggle that can race itself.
+     */
+    suspend fun setFavorite(songId: Long, favorite: Boolean) = favoriteMutex.withLock {
+        val current = dao.getState(songId) ?: SongStateEntity(songId = songId)
+        if (current.isFavorite != favorite) dao.upsertState(current.copy(isFavorite = favorite))
     }
 
     suspend fun recordPlay(song: Song) {

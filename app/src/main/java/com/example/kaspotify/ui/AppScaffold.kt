@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.ui.components.GradientBackdrop
 import com.example.kaspotify.ui.components.MiniPlayer
+import com.example.kaspotify.ui.components.niagaraPage
 import com.example.kaspotify.ui.screens.AlbumDetailScreen
 import com.example.kaspotify.ui.screens.ArtistDetailScreen
 import com.example.kaspotify.ui.screens.EffectsScreen
@@ -212,50 +213,51 @@ fun AppScaffold(viewModel: MusicViewModel) {
                     modifier = Modifier.fillMaxSize().widthIn(max = 640.dp),
                     key = { tabsList[it].name }
                 ) { page ->
-                    when (tabsList[page]) {
-                        Tab.LIBRARY -> {
-                            val albumId = openedAlbumId
-                            val artistName = openedArtistName
-                            when {
-                                albumId != null -> AlbumDetailScreen(
-                                    albumId = albumId,
-                                    viewModel = viewModel,
-                                    onBack = { openedAlbumId = null },
-                                    onMore = onMore
-                                )
-                                artistName != null -> ArtistDetailScreen(
-                                    artistName = artistName,
-                                    viewModel = viewModel,
-                                    onBack = { openedArtistName = null },
-                                    onMore = onMore
-                                )
-                                else -> LibraryScreen(
-                                    viewModel = viewModel,
-                                    onMore = onMore,
-                                    onOpenAlbum = { openedAlbumId = it },
-                                    onOpenArtist = { openedArtistName = it },
-                                    onOpenSmartPlaylist = { openedSmartPlaylist = it },
-                                    onOpenSettings = { showSettings = true }
-                                )
+                    Box(Modifier.fillMaxSize().niagaraPage(pagerState, page)) {
+                        when (tabsList[page]) {
+                            Tab.LIBRARY -> {
+                                val albumId = openedAlbumId
+                                val artistName = openedArtistName
+                                when {
+                                    albumId != null -> AlbumDetailScreen(
+                                        albumId = albumId,
+                                        viewModel = viewModel,
+                                        onBack = { openedAlbumId = null },
+                                        onMore = onMore
+                                    )
+                                    artistName != null -> ArtistDetailScreen(
+                                        artistName = artistName,
+                                        viewModel = viewModel,
+                                        onBack = { openedArtistName = null },
+                                        onMore = onMore
+                                    )
+                                    else -> LibraryScreen(
+                                        viewModel = viewModel,
+                                        onMore = onMore,
+                                        onOpenAlbum = { openedAlbumId = it },
+                                        onOpenArtist = { openedArtistName = it },
+                                        onOpenSettings = { showSettings = true }
+                                    )
+                                }
                             }
-                        }
-                        Tab.SEARCH -> SearchScreen(viewModel, onMore)
-                        Tab.PLAYLISTS -> {
-                            val id = openedPlaylistId
-                            if (id == null) {
-                                PlaylistsScreen(
-                                    viewModel = viewModel,
-                                    onOpenPlaylist = { openedPlaylistId = it },
-                                    onOpenSmartPlaylist = { openedSmartPlaylist = it },
-                                    onOpenQuality = { showQuality = true }
-                                )
-                            } else {
-                                PlaylistDetailScreen(
-                                    playlistId = id,
-                                    viewModel = viewModel,
-                                    onBack = { openedPlaylistId = null },
-                                    onMore = onMore
-                                )
+                            Tab.SEARCH -> SearchScreen(viewModel, onMore)
+                            Tab.PLAYLISTS -> {
+                                val id = openedPlaylistId
+                                if (id == null) {
+                                    PlaylistsScreen(
+                                        viewModel = viewModel,
+                                        onOpenPlaylist = { openedPlaylistId = it },
+                                        onOpenSmartPlaylist = { openedSmartPlaylist = it },
+                                        onOpenQuality = { showQuality = true }
+                                    )
+                                } else {
+                                    PlaylistDetailScreen(
+                                        playlistId = id,
+                                        viewModel = viewModel,
+                                        onBack = { openedPlaylistId = null },
+                                        onMore = onMore
+                                    )
+                                }
                             }
                         }
                     }

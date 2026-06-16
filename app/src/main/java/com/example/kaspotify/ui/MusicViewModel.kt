@@ -179,6 +179,13 @@ class MusicViewModel @Inject constructor(
         notify(if (song.isFavorite) "Removed from Liked" else "Added to Liked")
     }
 
+    /** Sets an explicit like state (idempotent). Used by double-tap, which flips an optimistic UI
+     *  flag and tells us the exact target — avoiding stale-read toggles that jump randomly. */
+    fun setFavorite(song: Song, favorite: Boolean) = viewModelScope.launch {
+        repository.setFavorite(song.id, favorite)
+        notify(if (favorite) "Added to Liked" else "Removed from Liked")
+    }
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }
