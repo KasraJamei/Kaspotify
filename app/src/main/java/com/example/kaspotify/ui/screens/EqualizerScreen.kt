@@ -113,6 +113,8 @@ fun EqualizerScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                QuickPresets(eq)
+                Spacer(Modifier.height(22.dp))
                 when (mode) {
                     EqMode.SIMPLE -> SimpleEqControls(eq)
                     EqMode.ADVANCED -> AdvancedEqControls(eq)
@@ -160,6 +162,29 @@ private fun ModeToggle(mode: EqMode, onSelect: (EqMode) -> Unit) {
                     color = content
                 )
             }
+        }
+    }
+}
+
+// ---- Quick one-tap tone presets (shown in both modes) ----
+
+@Composable
+private fun QuickPresets(eq: EqualizerController) {
+    val current by eq.currentQuick.collectAsStateWithLifecycle()
+    Text("Quick presets", style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        com.example.kaspotify.playback.QuickEq.entries.forEach { preset ->
+            FilterChip(
+                selected = current == preset,
+                onClick = { eq.applyQuickEq(preset) },
+                label = { Text(preset.label) }
+            )
         }
     }
 }

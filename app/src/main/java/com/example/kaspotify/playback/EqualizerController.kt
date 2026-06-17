@@ -21,6 +21,20 @@ enum class EqMode { SIMPLE, ADVANCED }
 enum class SimpleBand { BASS, MID, TREBLE }
 
 /**
+ * One-tap tone curves applied by frequency across whatever hardware bands the device exposes — so
+ * they behave consistently everywhere, independent of the device's own built-in preset list.
+ */
+enum class QuickEq(val label: String) {
+    FLAT("Normal"),
+    BASS_BOOST("Bass boost"),
+    TREBLE_BOOST("Treble boost"),
+    VOCAL("Vocal"),
+    LOUDNESS("Bass + Treble"),
+    ACOUSTIC("Acoustic"),
+    ELECTRONIC("Electronic")
+}
+
+/**
  * Owns an [Equalizer] bound to the ExoPlayer audio session. The session id is supplied by
  * [PlaybackService] once the player is created; the UI reads/controls it through this singleton via
  * the ViewModel.
@@ -54,6 +68,15 @@ class EqualizerController @Inject constructor() {
     private val _currentPreset = MutableStateFlow(-1)
     val currentPreset: StateFlow<Int> = _currentPreset.asStateFlow()
 
+    /** The selected one-tap tone curve, or null when bands have been customized. */
+    private val _currentQuick = MutableStateFlow<QuickEq?>(QuickEq.FLAT)
+    val currentQuick: StateFlow<QuickEq?> = _currentQuick.asStateFlow()
+
+    // Remembered so settings survive the effect being recreated (e.g. service restart / new session).
+    private var desiredLevels: ShortArray? = null
+    private var desiredEnabled = false
+    private var desiredQuick: QuickEq? = QuickEq.FLAT
+
     /** Simple vs Advanced view. Held here (singleton) so it survives screen recompositions. */
     private val _mode = MutableStateFlow(EqMode.SIMPLE)
     val mode: StateFlow<EqMode> = _mode.asStateFlow()
@@ -77,10 +100,19 @@ class EqualizerController @Inject constructor() {
             val range = eq.bandLevelRange
             _levelRange.value = range[0].toInt() to range[1].toInt()
             _presets.value = (0 until eq.numberOfPresets).map { eq.getPresetName(it.toShort()) }
-            _enabled.value = eq.enabled
             simpleGroups = computeSimpleGroups(eq)
+            // Re-apply the user's last EQ so it survives the effect being recreated.
+            val saved = desiredLevels
+            if (saved != null && saved.size == eq.numberOfBands.toInt()) {
+                saved.forEachIndexed { i, lvl -> runCatching { eq.setBandLevel(i.toShort(), lvl) } }
+                eq.enabled = desiredEnabled
+                _currentQuick.value = desiredQuick
+            } else {
+                eq.enabled = desiredEnabled
+            }
+            _enabled.value = eq.enabled
             refreshBands()
-            _currentPreset.value = eq.currentPreset.toInt()
+            _currentPreset.value = runCatching { eq.currentPreset.toInt() }.getOrDefault(-1)
             _available.value = true
         } catch (t: Throwable) {
             // Equalizer is unavailable on some devices/emulators.
@@ -94,9 +126,69 @@ class EqualizerController @Inject constructor() {
     }
 
     fun setEnabled(enabled: Boolean) {
+        desiredEnabled = enabled
         equalizer?.let {
             it.enabled = enabled
             _enabled.value = it.enabled
+        }
+    }
+
+    // ---- Quick one-tap tone presets ----
+
+    fun applyQuickEq(preset: QuickEq) {
+        val eq = equalizer ?: return
+        try {
+            ensureEnabled(eq)
+            val (min, max) = _levelRange.value
+            for (i in 0 until eq.numberOfBands) {
+                val hz = eq.getCenterFreq(i.toShort()) / 1000
+                val frac = quickGain(preset, hz)
+                val mb = (if (frac >= 0) frac * max else frac * -min).roundToInt().toShort()
+                eq.setBandLevel(i.toShort(), mb)
+            }
+            _currentPreset.value = -1
+            _currentQuick.value = preset
+            desiredQuick = preset
+            refreshBands()
+        } catch (_: Throwable) {
+        }
+    }
+
+    /** Tone-curve gain (-1..+1) for [preset] at a given center frequency in Hz. */
+    private fun quickGain(preset: QuickEq, hz: Int): Float = when (preset) {
+        QuickEq.FLAT -> 0f
+        QuickEq.BASS_BOOST -> when {
+            hz <= 150 -> 0.85f
+            hz <= 400 -> 0.45f
+            else -> 0f
+        }
+        QuickEq.TREBLE_BOOST -> when {
+            hz >= 6000 -> 0.85f
+            hz >= 3000 -> 0.45f
+            else -> 0f
+        }
+        QuickEq.VOCAL -> when {
+            hz in 500..3000 -> 0.55f
+            hz < 150 -> -0.2f
+            hz > 8000 -> -0.1f
+            else -> 0.1f
+        }
+        QuickEq.LOUDNESS -> when {
+            hz <= 150 -> 0.7f
+            hz >= 6000 -> 0.6f
+            hz in 800..2500 -> -0.25f
+            else -> 0f
+        }
+        QuickEq.ACOUSTIC -> when {
+            hz <= 200 -> 0.35f
+            hz in 2000..5000 -> 0.35f
+            else -> 0.1f
+        }
+        QuickEq.ELECTRONIC -> when {
+            hz <= 120 -> 0.6f
+            hz >= 8000 -> 0.5f
+            hz in 800..2500 -> -0.15f
+            else -> 0.05f
         }
     }
 
@@ -108,6 +200,7 @@ class EqualizerController @Inject constructor() {
             ensureEnabled(eq)
             eq.setBandLevel(bandIndex.toShort(), levelMilliBel)
             _currentPreset.value = -1 // custom
+            clearQuick()
             refreshBands()
         } catch (_: Throwable) {
         }
@@ -119,9 +212,15 @@ class EqualizerController @Inject constructor() {
             ensureEnabled(eq)
             eq.usePreset(presetIndex.toShort())
             _currentPreset.value = presetIndex
+            clearQuick()
             refreshBands()
         } catch (_: Throwable) {
         }
+    }
+
+    private fun clearQuick() {
+        _currentQuick.value = null
+        desiredQuick = null
     }
 
     // ---- Simple controls (Bass / Mid / Treble on a -10..+10 scale) ----
@@ -135,6 +234,7 @@ class EqualizerController @Inject constructor() {
             ensureEnabled(eq)
             simpleGroups[band]?.forEach { idx -> eq.setBandLevel(idx.toShort(), level) }
             _currentPreset.value = -1 // custom
+            clearQuick()
             refreshBands()
         } catch (_: Throwable) {
         }
@@ -147,6 +247,8 @@ class EqualizerController @Inject constructor() {
             ensureEnabled(eq)
             (0 until eq.numberOfBands).forEach { eq.setBandLevel(it.toShort(), 0) }
             _currentPreset.value = -1
+            _currentQuick.value = QuickEq.FLAT
+            desiredQuick = QuickEq.FLAT
             refreshBands()
         } catch (_: Throwable) {
         }
@@ -177,6 +279,8 @@ class EqualizerController @Inject constructor() {
             )
         }
         _bands.value = bands
+        // Remember the applied levels so they can be restored if the effect is recreated.
+        desiredLevels = ShortArray(bands.size) { bands[it].level }
         // Keep the Simple knobs reflecting reality (e.g. after a preset or advanced edit).
         _simpleLevels.value = simpleGroups.mapValues { (_, indices) ->
             if (indices.isEmpty()) 0
