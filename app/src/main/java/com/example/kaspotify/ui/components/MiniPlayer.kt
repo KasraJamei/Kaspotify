@@ -47,6 +47,7 @@ import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
 import com.example.kaspotify.ui.theme.LocalNeomorphism
 import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
 import com.example.kaspotify.ui.theme.neoRaised
 
 @Composable
@@ -84,7 +85,7 @@ fun MiniPlayer(
             .then(if (neo) Modifier.neoRaised(cornerRadius = 18.dp) else Modifier)
             .clip(shape)
             .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(fill))
-            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, shape))
+            .then(if (neo) Modifier.neoBevel(shape) else Modifier.border(1.dp, GlassStroke, shape))
             .clickable(onClick = onClick)
     ) {
         Column {

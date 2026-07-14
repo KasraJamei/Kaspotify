@@ -19,9 +19,11 @@ lists and animations stay fluid.
 
 Prefer something softer? **Settings → Appearance → Interface theme** offers a
 polished **Neomorphism** skin: a soft-charcoal base where every card, button,
-nav pill, and the mini-player is gently extruded with twin light/dark shadows
-(raised surfaces, pressed-in wells for active states). It's a live switch — no
-restart — and it re-skins the whole app through the shared surface primitives.
+nav pill, mini-player, and the Now Playing play button is extruded with
+high-contrast twin light/dark shadows, a crisp diagonal **bevel edge** for
+definition, pressed-in wells for active states, and a periwinkle accent that
+glows on the primary control. It's a live switch — no restart — and it re-skins
+the whole app through the shared surface primitives.
 
 ## Features
 

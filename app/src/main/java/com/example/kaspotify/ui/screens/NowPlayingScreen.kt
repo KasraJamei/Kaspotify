@@ -89,6 +89,10 @@ import com.example.kaspotify.ui.components.VisualizerView
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
+import com.example.kaspotify.ui.theme.neoAccentGlow
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -121,16 +125,21 @@ fun NowPlayingScreen(
     val current = song
     val ambient = LocalAmbientColor.current
     val base = MaterialTheme.colorScheme.background
+    // Neomorphism keeps a flat, even ground; the album-art gradient is only for the default theme.
+    val neoScreen = LocalNeomorphism.current
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(base)
-            .background(
-                Brush.verticalGradient(
-                    0f to ambient.copy(alpha = 0.85f).compositeOver(base),
-                    0.5f to ambient.copy(alpha = 0.30f).compositeOver(base),
-                    1f to base
+            .then(
+                if (neoScreen) Modifier
+                else Modifier.background(
+                    Brush.verticalGradient(
+                        0f to ambient.copy(alpha = 0.85f).compositeOver(base),
+                        0.5f to ambient.copy(alpha = 0.30f).compositeOver(base),
+                        1f to base
+                    )
                 )
             )
     ) {
@@ -381,11 +390,14 @@ fun NowPlayingScreen(
                 IconButton(onClick = viewModel::previous) {
                     Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(40.dp))
                 }
+                val neoControls = LocalNeomorphism.current
                 Box(
                     modifier = Modifier
                         .size(72.dp)
+                        .then(if (neoControls) Modifier.neoAccentGlow(cornerRadius = 36.dp) else Modifier)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(if (neoControls) Neo.Accent else MaterialTheme.colorScheme.primary)
+                        .then(if (neoControls) Modifier.neoBevel(CircleShape) else Modifier)
                         .clickable(onClick = viewModel::togglePlayPause),
                     contentAlignment = Alignment.Center
                 ) {

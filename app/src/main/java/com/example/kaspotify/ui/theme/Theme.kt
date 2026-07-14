@@ -45,9 +45,9 @@ private val KaspotifyColorScheme = darkColorScheme(
 // the page and read purely by their twin shadows. A gentle periwinkle accent replaces platinum.
 private val NeomorphicColorScheme = darkColorScheme(
     primary = Neo.Accent,
-    onPrimary = Color(0xFF16181E),
+    onPrimary = Neo.OnAccent,
     secondary = Neo.OnSurfaceVariant,
-    onSecondary = Color(0xFF16181E),
+    onSecondary = Neo.OnAccent,
     background = Neo.Base,
     onBackground = Neo.OnSurface,
     surface = Neo.Base,

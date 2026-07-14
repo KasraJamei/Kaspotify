@@ -77,6 +77,7 @@ import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalNeomorphism
 import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
 import com.example.kaspotify.ui.theme.neoRaised
 
 @Composable
@@ -374,15 +375,16 @@ private fun GuideRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val neoChip = LocalNeomorphism.current
+        val chipShape = RoundedCornerShape(percent = 50)
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp) else Modifier)
-                .clip(RoundedCornerShape(percent = 50))
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 4.dp, blur = 12.dp) else Modifier)
+                .clip(chipShape)
                 .background(if (neoChip) Neo.Base else GlassFill)
                 .then(
-                    if (neoChip) Modifier
-                    else Modifier.border(1.dp, GlassStroke, RoundedCornerShape(percent = 50))
+                    if (neoChip) Modifier.neoBevel(chipShape)
+                    else Modifier.border(1.dp, GlassStroke, chipShape)
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -524,9 +526,10 @@ private fun ThemeOption(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .neoRaised(cornerRadius = 12.dp)
+                    .neoRaised(cornerRadius = 12.dp, offset = 5.dp, blur = 14.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Neo.Base)
+                    .neoBevel(RoundedCornerShape(12.dp))
             )
         } else {
             Box(
@@ -602,15 +605,16 @@ private fun SettingToggle(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val neoChip = LocalNeomorphism.current
+        val chipShape = RoundedCornerShape(percent = 50)
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp) else Modifier)
-                .clip(RoundedCornerShape(percent = 50))
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 4.dp, blur = 12.dp) else Modifier)
+                .clip(chipShape)
                 .background(if (neoChip) Neo.Base else GlassFill)
                 .then(
-                    if (neoChip) Modifier
-                    else Modifier.border(1.dp, GlassStroke, RoundedCornerShape(percent = 50))
+                    if (neoChip) Modifier.neoBevel(chipShape)
+                    else Modifier.border(1.dp, GlassStroke, chipShape)
                 ),
             contentAlignment = Alignment.Center
         ) {

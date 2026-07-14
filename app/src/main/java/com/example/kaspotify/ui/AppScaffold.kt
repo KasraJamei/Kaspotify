@@ -115,6 +115,7 @@ import com.example.kaspotify.ui.theme.GlassFillStrong
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalNeomorphism
 import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
 import com.example.kaspotify.ui.theme.neoInset
 import com.example.kaspotify.ui.theme.neoRaised
 
@@ -542,7 +543,7 @@ private fun FloatingNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
             .then(if (neo) Modifier.neoRaised(cornerRadius = 30.dp) else Modifier)
             .clip(shape)
             .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(GlassFillStrong))
-            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, shape))
+            .then(if (neo) Modifier.neoBevel(shape) else Modifier.border(1.dp, GlassStroke, shape))
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)

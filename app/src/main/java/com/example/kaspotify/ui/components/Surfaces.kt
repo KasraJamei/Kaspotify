@@ -37,6 +37,7 @@ import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
 import com.example.kaspotify.ui.theme.LocalNeomorphism
 import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
 import com.example.kaspotify.ui.theme.neoRaised
 
 /**
@@ -94,7 +95,8 @@ fun GlassCard(
             modifier = modifier
                 .neoRaised(cornerRadius = neoCornerRadius)
                 .clip(shape)
-                .background(Neo.Base),
+                .background(Neo.Base)
+                .neoBevel(shape),
             content = content
         )
         return
@@ -156,10 +158,10 @@ fun GlassIconButton(
     Box(
         modifier = modifier
             .size(size)
-            .then(if (neo) Modifier.neoRaised(cornerRadius = size / 2f) else Modifier)
+            .then(if (neo) Modifier.neoRaised(cornerRadius = size / 2f, offset = 4.dp, blur = 12.dp) else Modifier)
             .clip(circle)
             .background(if (neo) Neo.Base else GlassFill)
-            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, circle)),
+            .then(if (neo) Modifier.neoBevel(circle) else Modifier.border(1.dp, GlassStroke, circle)),
         contentAlignment = Alignment.Center
     ) {
         IconButton(onClick = onClick, content = { content() })
