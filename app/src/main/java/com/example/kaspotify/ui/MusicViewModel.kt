@@ -258,7 +258,8 @@ class MusicViewModel @Inject constructor(
     /** Estimated seconds remaining to analyze the not-yet-known songs (~0.6s each). */
     val genreEstimateSeconds: StateFlow<Int> =
         combine(repository.songs, repository.genreMetadata) { songs, meta ->
-            (repository.pendingGenreCount(songs.size, meta.size) * 0.6f).toInt()
+            // Online-first matching averages ~1.2s per song (search + politeness delay).
+            (repository.pendingGenreCount(songs.size, meta.size) * 1.2f).toInt()
         }.asState(0)
 
     /** Analyze the library (resumable, live preview) then (re)build the per-genre playlists. */
@@ -279,6 +280,13 @@ class MusicViewModel @Inject constructor(
             if (count > 0) "Created $count genre playlist${if (count == 1) "" else "s"}"
             else "Analysis done — not enough songs per genre yet"
         )
+    }
+
+    /** Clears unrecognized rows (never manual edits) and re-runs the analysis over just them. */
+    fun retryUnrecognizedGenres() = viewModelScope.launch {
+        if (_genreScan.value.running) return@launch
+        repository.resetUnrecognizedGenres()
+        analyzeAndBuildGenres()
     }
 
     fun setSongGenre(songId: Long, genre: String) =

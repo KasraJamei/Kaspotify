@@ -95,6 +95,9 @@ interface MusicDao {
     @Query("DELETE FROM song_genre")
     suspend fun clearGenres()
 
+    @Query("DELETE FROM song_genre WHERE genre IS NULL AND source != 'manual'")
+    suspend fun clearUnrecognizedGenres()
+
     // ---- Search history ----
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

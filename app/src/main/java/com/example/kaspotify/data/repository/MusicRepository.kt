@@ -204,10 +204,11 @@ class MusicRepository @Inject constructor(
     fun pendingGenreCount(librarySize: Int, analyzed: Int): Int = (librarySize - analyzed).coerceAtLeast(0)
 
     /**
-     * Analyzes every not-yet-known song one by one — embedded MediaStore tag first, then an online
-     * lookup by name — and saves the result (genre, or null when unrecognized) to the app's own
-     * store. Already-analyzed songs are skipped, so this is fully resumable. [onProgress] streams
-     * (done, total, currentTitle, foundGenre) for the live preview.
+     * Analyzes every not-yet-known song one by one — a *validated* online catalog match first
+     * (high accuracy), falling back to the file's embedded tag when the song can't be confidently
+     * matched (or there's no network) — and saves the result (genre, or null when unrecognized) to
+     * the app's own store. Already-analyzed songs are skipped, so this is fully resumable.
+     * [onProgress] streams (done, total, currentTitle, foundGenre) for the live preview.
      */
     suspend fun analyzeGenres(onProgress: (Int, Int, String, String?) -> Unit) {
         val library = scannedSongs.value
@@ -216,21 +217,26 @@ class MusicRepository @Inject constructor(
         val tagGenres = importer.scanGenres()
         val pending = library.filter { it.id !in already }
         pending.forEachIndexed { index, song ->
-            val tag = tagGenres[song.id]?.let { normalizeGenre(it) }
-            val resolved: String?
-            val source: String
-            if (tag != null) {
-                resolved = tag
-                source = "tag"
-            } else {
-                resolved = genreClassifier.lookupGenre(song.artist, song.title)?.let { normalizeGenre(it) }
-                source = "online"
-                delay(120) // be polite to the lookup service
+            val online = genreClassifier.lookupGenre(song.artist, song.title)
+            val tag = tagGenres[song.id]
+                ?.let { genreClassifier.canonicalize(it) }
+                ?.takeIf { it.isNotBlank() }
+            val (resolved, source) = when {
+                online != null -> online to "online"
+                tag != null -> tag to "tag"
+                else -> null to "online"
             }
             dao.upsertGenre(SongGenreEntity(songId = song.id, genre = resolved, source = source))
             onProgress(index + 1, pending.size, song.title, resolved)
+            delay(250) // be polite to the catalog APIs (they also back off internally on 429)
         }
     }
+
+    /**
+     * Clears only the analyzed-but-unrecognized rows (never manual edits) so the next
+     * [analyzeGenres] retries exactly those songs online.
+     */
+    suspend fun resetUnrecognizedGenres() = dao.clearUnrecognizedGenres()
 
     /** Groups the analyzed library into one smart playlist per genre. Returns playlists created. */
     suspend fun createGenrePlaylists(): Int {
@@ -254,15 +260,13 @@ class MusicRepository @Inject constructor(
 
     suspend fun setManualGenre(songId: Long, genre: String) {
         val g = genre.trim().ifBlank { null }
-        dao.upsertGenre(SongGenreEntity(songId, g?.let { normalizeGenre(it) }, "manual"))
+        dao.upsertGenre(
+            SongGenreEntity(songId, g?.let { genreClassifier.canonicalize(it) }?.takeIf { it.isNotBlank() }, "manual")
+        )
     }
 
     suspend fun resetGenre(songId: Long) = dao.deleteGenre(songId)
     suspend fun resetAllGenres() = dao.clearGenres()
-
-    private fun normalizeGenre(raw: String): String =
-        raw.trim().split(Regex("[/;,]")).first().trim()
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
     private fun orderByIds(songs: List<Song>, ids: List<Long>): List<Song> {
         val byId = songs.associateBy { it.id }

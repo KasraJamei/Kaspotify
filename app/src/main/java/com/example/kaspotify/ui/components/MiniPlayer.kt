@@ -84,7 +84,7 @@ fun MiniPlayer(
             .padding(horizontal = 10.dp)
             .then(if (neo) Modifier.neoRaised(cornerRadius = 18.dp) else Modifier)
             .clip(shape)
-            .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(fill))
+            .then(if (neo) Modifier.background(Neo.surface()) else Modifier.background(fill))
             .then(if (neo) Modifier.neoBevel(shape) else Modifier.border(1.dp, GlassStroke, shape))
             .clickable(onClick = onClick)
     ) {

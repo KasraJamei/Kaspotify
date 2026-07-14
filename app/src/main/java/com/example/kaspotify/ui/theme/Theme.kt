@@ -52,7 +52,7 @@ private val NeomorphicColorScheme = darkColorScheme(
     onBackground = Neo.OnSurface,
     surface = Neo.Base,
     onSurface = Neo.OnSurface,
-    surfaceVariant = Neo.BaseElevated,
+    surfaceVariant = Neo.SurfaceLit,
     onSurfaceVariant = Neo.OnSurfaceVariant,
     outline = Neo.Stroke
 )

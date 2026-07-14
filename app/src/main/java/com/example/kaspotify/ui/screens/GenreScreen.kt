@@ -48,8 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kaspotify.ui.GenreEntry
 import com.example.kaspotify.ui.MusicViewModel
+import com.example.kaspotify.ui.components.GlassCard
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoBevel
+import com.example.kaspotify.ui.theme.neoRaised
 
 @Composable
 fun GenreScreen(
@@ -100,7 +105,8 @@ fun GenreScreen(
                     unrecognized = unrecognized,
                     genreCount = summary.size,
                     estimateSeconds = estimate,
-                    onAnalyze = { viewModel.analyzeAndBuildGenres() }
+                    onAnalyze = { viewModel.analyzeAndBuildGenres() },
+                    onRetryUnrecognized = { viewModel.retryUnrecognizedGenres() }
                 )
             }
 
@@ -118,11 +124,22 @@ fun GenreScreen(
                     ) {
                         items(summary, key = { it.first }) { (genre, count) ->
                             val shape = RoundedCornerShape(percent = 50)
+                            val neo = LocalNeomorphism.current
                             Row(
                                 modifier = Modifier
+                                    .then(
+                                        if (neo) Modifier.neoRaised(cornerRadius = 16.dp, offset = 3.dp, blur = 8.dp)
+                                        else Modifier
+                                    )
                                     .clip(shape)
-                                    .background(GlassFill)
-                                    .border(1.dp, GlassStroke, shape)
+                                    .then(
+                                        if (neo) Modifier.background(Neo.surface())
+                                        else Modifier.background(GlassFill)
+                                    )
+                                    .then(
+                                        if (neo) Modifier.neoBevel(shape)
+                                        else Modifier.border(1.dp, GlassStroke, shape)
+                                    )
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text("$genre · $count", style = MaterialTheme.typography.labelLarge)
@@ -185,18 +202,18 @@ private fun AnalyzeCard(
     unrecognized: Int,
     genreCount: Int,
     estimateSeconds: Int,
-    onAnalyze: () -> Unit
+    onAnalyze: () -> Unit,
+    onRetryUnrecognized: () -> Unit
 ) {
     val shape = RoundedCornerShape(18.dp)
-    Column(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clip(shape)
-            .background(GlassFill)
-            .border(1.dp, GlassStroke, shape)
-            .padding(16.dp)
+            .padding(16.dp),
+        shape = shape,
+        neoCornerRadius = 18.dp
     ) {
+      Column(modifier = Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.size(10.dp))
@@ -205,6 +222,12 @@ private fun AnalyzeCard(
         Spacer(Modifier.height(8.dp))
         Text(
             "$analyzed analyzed · $unrecognized unrecognized · $genreCount genres",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Each song is matched one-by-one against online music catalogs, so genres are accurate even when files carry no tags.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -252,10 +275,19 @@ private fun AnalyzeCard(
                 )
                 Spacer(Modifier.height(10.dp))
             }
-            Button(onClick = onAnalyze) {
-                Text(if (analyzed == 0) "Analyze & build playlists" else "Update genres & rebuild")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onAnalyze) {
+                    Text(if (analyzed == 0) "Analyze & build playlists" else "Update genres & rebuild")
+                }
+                if (unrecognized > 0) {
+                    Spacer(Modifier.size(8.dp))
+                    TextButton(onClick = onRetryUnrecognized) {
+                        Text("Retry $unrecognized online")
+                    }
+                }
             }
         }
+      }
     }
 }
 

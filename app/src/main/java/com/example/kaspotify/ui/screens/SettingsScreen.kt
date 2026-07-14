@@ -379,9 +379,9 @@ private fun GuideRow(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 4.dp, blur = 12.dp) else Modifier)
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 3.dp, blur = 8.dp) else Modifier)
                 .clip(chipShape)
-                .background(if (neoChip) Neo.Base else GlassFill)
+                .then(if (neoChip) Modifier.background(Neo.surface()) else Modifier.background(GlassFill))
                 .then(
                     if (neoChip) Modifier.neoBevel(chipShape)
                     else Modifier.border(1.dp, GlassStroke, chipShape)
@@ -526,9 +526,9 @@ private fun ThemeOption(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .neoRaised(cornerRadius = 12.dp, offset = 5.dp, blur = 14.dp)
+                    .neoRaised(cornerRadius = 12.dp, offset = 4.dp, blur = 10.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Neo.Base)
+                    .background(Neo.surface())
                     .neoBevel(RoundedCornerShape(12.dp))
             )
         } else {
@@ -609,9 +609,9 @@ private fun SettingToggle(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 4.dp, blur = 12.dp) else Modifier)
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp, offset = 3.dp, blur = 8.dp) else Modifier)
                 .clip(chipShape)
-                .background(if (neoChip) Neo.Base else GlassFill)
+                .then(if (neoChip) Modifier.background(Neo.surface()) else Modifier.background(GlassFill))
                 .then(
                     if (neoChip) Modifier.neoBevel(chipShape)
                     else Modifier.border(1.dp, GlassStroke, chipShape)

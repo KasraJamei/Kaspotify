@@ -95,7 +95,7 @@ fun GlassCard(
             modifier = modifier
                 .neoRaised(cornerRadius = neoCornerRadius)
                 .clip(shape)
-                .background(Neo.Base)
+                .background(Neo.surface())
                 .neoBevel(shape),
             content = content
         )
@@ -158,9 +158,9 @@ fun GlassIconButton(
     Box(
         modifier = modifier
             .size(size)
-            .then(if (neo) Modifier.neoRaised(cornerRadius = size / 2f, offset = 4.dp, blur = 12.dp) else Modifier)
+            .then(if (neo) Modifier.neoRaised(cornerRadius = size / 2f, offset = 3.dp, blur = 8.dp) else Modifier)
             .clip(circle)
-            .background(if (neo) Neo.Base else GlassFill)
+            .then(if (neo) Modifier.background(Neo.surface()) else Modifier.background(GlassFill))
             .then(if (neo) Modifier.neoBevel(circle) else Modifier.border(1.dp, GlassStroke, circle)),
         contentAlignment = Alignment.Center
     ) {

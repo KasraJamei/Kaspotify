@@ -542,7 +542,7 @@ private fun FloatingNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
             .height(60.dp)
             .then(if (neo) Modifier.neoRaised(cornerRadius = 30.dp) else Modifier)
             .clip(shape)
-            .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(GlassFillStrong))
+            .then(if (neo) Modifier.background(Neo.surface()) else Modifier.background(GlassFillStrong))
             .then(if (neo) Modifier.neoBevel(shape) else Modifier.border(1.dp, GlassStroke, shape))
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -581,8 +581,12 @@ private fun NavItem(tab: Tab, selected: Boolean, onClick: () -> Unit, modifier: 
             .clip(shape)
             .then(
                 if (neo) {
-                    // Selected tab reads as a pressed-in well; unselected sits flush with the bar.
-                    if (selected) Modifier.neoInset(cornerRadius = 24.dp) else Modifier
+                    // Selected tab reads as a carved well: reversed gradient + inner shadow.
+                    if (selected) {
+                        Modifier
+                            .background(Neo.pressed())
+                            .neoInset(cornerRadius = 24.dp)
+                    } else Modifier
                 } else {
                     Modifier.background(pillColor)
                 }

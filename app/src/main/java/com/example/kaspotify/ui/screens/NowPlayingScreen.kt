@@ -396,7 +396,10 @@ fun NowPlayingScreen(
                         .size(72.dp)
                         .then(if (neoControls) Modifier.neoAccentGlow(cornerRadius = 36.dp) else Modifier)
                         .clip(CircleShape)
-                        .background(if (neoControls) Neo.Accent else MaterialTheme.colorScheme.primary)
+                        .then(
+                            if (neoControls) Modifier.background(Neo.accentSurface())
+                            else Modifier.background(MaterialTheme.colorScheme.primary)
+                        )
                         .then(if (neoControls) Modifier.neoBevel(CircleShape) else Modifier)
                         .clickable(onClick = viewModel::togglePlayPause),
                     contentAlignment = Alignment.Center
