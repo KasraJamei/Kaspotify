@@ -113,6 +113,10 @@ import com.example.kaspotify.ui.screens.SmartPlaylistType
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassFillStrong
 import com.example.kaspotify.ui.theme.GlassStroke
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoInset
+import com.example.kaspotify.ui.theme.neoRaised
 
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
     LIBRARY(R.string.nav_home, Icons.Filled.Home),
@@ -529,14 +533,16 @@ private fun GlassSnackbar(message: String, kind: ToastKind, seq: Int) {
 @Composable
 private fun FloatingNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
     val shape = RoundedCornerShape(percent = 50)
+    val neo = LocalNeomorphism.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 28.dp)
             .height(60.dp)
+            .then(if (neo) Modifier.neoRaised(cornerRadius = 30.dp) else Modifier)
             .clip(shape)
-            .background(GlassFillStrong)
-            .border(1.dp, GlassStroke, shape)
+            .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(GlassFillStrong))
+            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, shape))
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -566,12 +572,20 @@ private fun NavItem(tab: Tab, selected: Boolean, onClick: () -> Unit, modifier: 
         label = "navContent"
     )
     val shape = RoundedCornerShape(percent = 50)
+    val neo = LocalNeomorphism.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
             .clip(shape)
-            .background(pillColor)
+            .then(
+                if (neo) {
+                    // Selected tab reads as a pressed-in well; unselected sits flush with the bar.
+                    if (selected) Modifier.neoInset(cornerRadius = 24.dp) else Modifier
+                } else {
+                    Modifier.background(pillColor)
+                }
+            )
             .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically

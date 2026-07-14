@@ -75,6 +75,9 @@ import com.example.kaspotify.ui.MusicViewModel
 import com.example.kaspotify.ui.UpdateState
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoRaised
 
 @Composable
 fun SettingsScreen(
@@ -146,6 +149,24 @@ fun SettingsScreen(
             subtitle = "Use the smoothest display mode the screen allows",
             checked = settings.highRefreshRate,
             onChange = viewModel::setHighRefreshRate
+        )
+        Text(
+            stringResource(R.string.theme_label),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 2.dp)
+        )
+        ThemeOption(
+            title = stringResource(R.string.theme_default),
+            subtitle = stringResource(R.string.theme_default_desc),
+            selected = settings.themeStyle == "default",
+            onClick = { viewModel.setThemeStyle("default") }
+        )
+        ThemeOption(
+            title = stringResource(R.string.theme_neo),
+            subtitle = stringResource(R.string.theme_neo_desc),
+            selected = settings.themeStyle == "neomorphism",
+            onClick = { viewModel.setThemeStyle("neomorphism") }
         )
 
         SectionLabel(stringResource(R.string.sec_language))
@@ -352,12 +373,17 @@ private fun GuideRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val neoChip = LocalNeomorphism.current
         Box(
             modifier = Modifier
                 .size(38.dp)
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp) else Modifier)
                 .clip(RoundedCornerShape(percent = 50))
-                .background(GlassFill)
-                .border(1.dp, GlassStroke, RoundedCornerShape(percent = 50)),
+                .background(if (neoChip) Neo.Base else GlassFill)
+                .then(
+                    if (neoChip) Modifier
+                    else Modifier.border(1.dp, GlassStroke, RoundedCornerShape(percent = 50))
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -479,6 +505,58 @@ private fun NameDialog(current: String, onConfirm: (String) -> Unit, onDismiss: 
 }
 
 @Composable
+private fun ThemeOption(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val isNeo = title == stringResource(R.string.theme_neo)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // A small live preview of each theme's surface treatment.
+        if (isNeo) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .neoRaised(cornerRadius = 12.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Neo.Base)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassFill)
+                    .border(1.dp, GlassStroke, RoundedCornerShape(12.dp))
+            )
+        }
+        Spacer(Modifier.size(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = "Selected",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
 private fun LanguageOption(title: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
@@ -523,12 +601,17 @@ private fun SettingToggle(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val neoChip = LocalNeomorphism.current
         Box(
             modifier = Modifier
                 .size(38.dp)
+                .then(if (neoChip) Modifier.neoRaised(cornerRadius = 19.dp) else Modifier)
                 .clip(RoundedCornerShape(percent = 50))
-                .background(GlassFill)
-                .border(1.dp, GlassStroke, RoundedCornerShape(percent = 50)),
+                .background(if (neoChip) Neo.Base else GlassFill)
+                .then(
+                    if (neoChip) Modifier
+                    else Modifier.border(1.dp, GlassStroke, RoundedCornerShape(percent = 50))
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(

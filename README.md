@@ -17,6 +17,12 @@ glow shifts with the music. The UI is built for smoothness — it requests the
 display's highest refresh-rate mode and keeps recomposition tightly scoped so
 lists and animations stay fluid.
 
+Prefer something softer? **Settings → Appearance → Interface theme** offers a
+polished **Neomorphism** skin: a soft-charcoal base where every card, button,
+nav pill, and the mini-player is gently extruded with twin light/dark shadows
+(raised surfaces, pressed-in wells for active states). It's a live switch — no
+restart — and it re-skins the whole app through the shared surface primitives.
+
 ## Features
 
 - **Offline importer** — scans device audio via `MediaStore` (music only, skips

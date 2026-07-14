@@ -57,10 +57,13 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(settings.highRefreshRate) { applyHighestRefreshRate(settings.highRefreshRate) }
 
             // The accent stays platinum; the art color only feeds the ambient gradient backdrop,
-            // and only when album-art theming is enabled.
-            val ambientColor = if (settings.albumArtTheming) artworkAccent?.asAmbient() else null
+            // and only when album-art theming is enabled. Neomorphism uses a flat soft base, so the
+            // ambient gradient is suppressed there for a clean, consistent extrusion surface.
+            val neomorphism = settings.themeStyle == "neomorphism"
+            val ambientColor =
+                if (settings.albumArtTheming && !neomorphism) artworkAccent?.asAmbient() else null
             CompositionLocalProvider(LocalAppSettings provides settings) {
-                KaspotifyTheme(ambientColor = ambientColor) {
+                KaspotifyTheme(ambientColor = ambientColor, neomorphism = neomorphism) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background

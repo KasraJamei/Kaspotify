@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import com.example.kaspotify.data.model.Song
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoRaised
 
 @Composable
 fun MiniPlayer(
@@ -66,6 +69,7 @@ fun MiniPlayer(
     val ambient = LocalAmbientColor.current
     val shape = RoundedCornerShape(18.dp)
     val surface = MaterialTheme.colorScheme.surface
+    val neo = LocalNeomorphism.current
     val fill = Brush.horizontalGradient(
         listOf(
             ambient.copy(alpha = 0.55f).compositeOver(surface),
@@ -77,9 +81,10 @@ fun MiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
+            .then(if (neo) Modifier.neoRaised(cornerRadius = 18.dp) else Modifier)
             .clip(shape)
-            .background(fill)
-            .border(1.dp, GlassStroke, shape)
+            .then(if (neo) Modifier.background(Neo.Base) else Modifier.background(fill))
+            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, shape))
             .clickable(onClick = onClick)
     ) {
         Column {

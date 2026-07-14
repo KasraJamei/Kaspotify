@@ -24,4 +24,10 @@
     <string name="lang_system">پیش‌فرض سیستم</string>
     <string name="lang_english">English</string>
     <string name="lang_farsi">فارسی</string>
+
+    <string name="theme_label">پوستهٔ ظاهری</string>
+    <string name="theme_default">پیش‌فرض</string>
+    <string name="theme_default_desc">شیشه‌ای مشکی عمیق با درخشش کاور آلبوم</string>
+    <string name="theme_neo">نئومورفیسم</string>
+    <string name="theme_neo_desc">سطوح مات و برجستهٔ نرم</string>
 </resources>

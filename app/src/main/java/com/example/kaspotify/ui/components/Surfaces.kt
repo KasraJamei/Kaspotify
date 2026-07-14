@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import com.example.kaspotify.ui.theme.GlassFill
 import com.example.kaspotify.ui.theme.GlassStroke
 import com.example.kaspotify.ui.theme.LocalAmbientColor
+import com.example.kaspotify.ui.theme.LocalNeomorphism
+import com.example.kaspotify.ui.theme.Neo
+import com.example.kaspotify.ui.theme.neoRaised
 
 /**
  * A full-screen backdrop: a soft vertical gradient from the album-art–derived ambient color at the
@@ -48,6 +51,16 @@ fun GradientBackdrop(
     content: @Composable BoxScope.() -> Unit
 ) {
     val base = MaterialTheme.colorScheme.background
+    // Neomorphism wants a flat, even ground so twin shadows read consistently — no ambient gradient.
+    if (LocalNeomorphism.current) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(base),
+            content = content
+        )
+        return
+    }
     val brush = Brush.verticalGradient(
         0f to ambient.copy(alpha = 0.42f).compositeOver(base),
         0.45f to ambient.copy(alpha = 0.12f).compositeOver(base),
@@ -62,14 +75,30 @@ fun GradientBackdrop(
     )
 }
 
-/** Soft translucent card — the "glass without blur" surface used across the app. */
+/**
+ * Soft translucent card — the "glass without blur" surface used across the app. Under the
+ * neomorphism theme the same call renders as a softly extruded panel (twin shadows, no border),
+ * so every screen that uses [GlassCard] picks up the new look for free.
+ */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = RoundedCornerShape(20.dp),
     fill: Color = GlassFill,
+    /** Corner radius used to line the neomorphic shadow up with [shape] (default matches 20.dp). */
+    neoCornerRadius: Dp = 20.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    if (LocalNeomorphism.current) {
+        Column(
+            modifier = modifier
+                .neoRaised(cornerRadius = neoCornerRadius)
+                .clip(shape)
+                .background(Neo.Base),
+            content = content
+        )
+        return
+    }
     Column(
         modifier = modifier
             .clip(shape)
@@ -122,12 +151,15 @@ fun GlassIconButton(
     size: Dp = 40.dp,
     content: @Composable () -> Unit
 ) {
+    val circle = RoundedCornerShape(percent = 50)
+    val neo = LocalNeomorphism.current
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(percent = 50))
-            .background(GlassFill)
-            .border(1.dp, GlassStroke, RoundedCornerShape(percent = 50)),
+            .then(if (neo) Modifier.neoRaised(cornerRadius = size / 2f) else Modifier)
+            .clip(circle)
+            .background(if (neo) Neo.Base else GlassFill)
+            .then(if (neo) Modifier else Modifier.border(1.dp, GlassStroke, circle)),
         contentAlignment = Alignment.Center
     ) {
         IconButton(onClick = onClick, content = { content() })

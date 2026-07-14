@@ -114,6 +114,7 @@ class MusicViewModel @Inject constructor(
     }
     fun setUserName(name: String) = settingsRepository.setUserName(name)
     fun setLanguage(lang: String) = settingsRepository.setLanguage(lang)
+    fun setThemeStyle(style: String) = settingsRepository.setThemeStyle(style)
     fun setOnboardingSeen(v: Boolean) = settingsRepository.setOnboardingSeen(v)
     fun setTourSeen(v: Boolean) = settingsRepository.setTourSeen(v)
 

@@ -33,6 +33,8 @@ data class AppSettings(
     val userName: String = "",
     /** App language: "system", "en", or "fa". */
     val language: String = "system",
+    /** Interface theme style: "default" (deep-black glass) or "neomorphism" (soft extruded UI). */
+    val themeStyle: String = "default",
     /** Whether the first-launch welcome guide has been shown/dismissed. */
     val onboardingSeen: Boolean = false,
     /** Whether the interactive coach-mark tour has been shown/dismissed. */
@@ -68,6 +70,7 @@ class SettingsRepository @Inject constructor(
         maxVolumePercent = prefs.getInt(KEY_VOL_CAP_PCT, 85),
         userName = prefs.getString(KEY_USER_NAME, "") ?: "",
         language = prefs.getString(KEY_LANGUAGE, "system") ?: "system",
+        themeStyle = prefs.getString(KEY_THEME_STYLE, "default") ?: "default",
         onboardingSeen = prefs.getBoolean(KEY_ONBOARDING, false),
         tourSeen = prefs.getBoolean(KEY_TOUR, false)
     )
@@ -103,6 +106,10 @@ class SettingsRepository @Inject constructor(
         prefs.edit().putString(KEY_LANGUAGE, lang).apply()
         _settings.value = _settings.value.copy(language = lang)
     }
+    fun setThemeStyle(style: String) {
+        prefs.edit().putString(KEY_THEME_STYLE, style).apply()
+        _settings.value = _settings.value.copy(themeStyle = style)
+    }
     fun setOnboardingSeen(v: Boolean) = put(KEY_ONBOARDING, v) { it.copy(onboardingSeen = v) }
     fun setTourSeen(v: Boolean) = put(KEY_TOUR, v) { it.copy(tourSeen = v) }
 
@@ -121,6 +128,7 @@ class SettingsRepository @Inject constructor(
         const val KEY_VOL_CAP_PCT = "max_volume_percent"
         const val KEY_USER_NAME = "user_name"
         const val KEY_LANGUAGE = "language"
+        const val KEY_THEME_STYLE = "theme_style"
         const val KEY_ONBOARDING = "onboarding_seen"
         const val KEY_TOUR = "tour_seen"
     }

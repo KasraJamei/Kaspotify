@@ -41,12 +41,30 @@ private val KaspotifyColorScheme = darkColorScheme(
     outline = GlassStroke
 )
 
+// Neomorphism scheme: surface == background (the soft-charcoal base) so extruded elements blend into
+// the page and read purely by their twin shadows. A gentle periwinkle accent replaces platinum.
+private val NeomorphicColorScheme = darkColorScheme(
+    primary = Neo.Accent,
+    onPrimary = Color(0xFF16181E),
+    secondary = Neo.OnSurfaceVariant,
+    onSecondary = Color(0xFF16181E),
+    background = Neo.Base,
+    onBackground = Neo.OnSurface,
+    surface = Neo.Base,
+    onSurface = Neo.OnSurface,
+    surfaceVariant = Neo.BaseElevated,
+    onSurfaceVariant = Neo.OnSurfaceVariant,
+    outline = Neo.Stroke
+)
+
 @Composable
 fun KaspotifyTheme(
     // Dark-first: this app is always dark.
     @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
     /** Optional ambient color (e.g. extracted from current album art) for gradient backdrops. */
     ambientColor: Color? = null,
+    /** When true, swap in the neomorphism (soft-UI) look across the whole app. */
+    neomorphism: Boolean = false,
     content: @Composable () -> Unit
 ) {
     // Animate the ambient once here so only gradient consumers react, and only on song change.
@@ -66,9 +84,12 @@ fun KaspotifyTheme(
         }
     }
 
-    CompositionLocalProvider(LocalAmbientColor provides animatedAmbient) {
+    CompositionLocalProvider(
+        LocalAmbientColor provides animatedAmbient,
+        LocalNeomorphism provides neomorphism
+    ) {
         MaterialTheme(
-            colorScheme = KaspotifyColorScheme,
+            colorScheme = if (neomorphism) NeomorphicColorScheme else KaspotifyColorScheme,
             typography = Typography,
             content = content
         )

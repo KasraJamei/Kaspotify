@@ -24,4 +24,10 @@
     <string name="lang_system">System default</string>
     <string name="lang_english">English</string>
     <string name="lang_farsi">فارسی</string>
+
+    <string name="theme_label">Interface theme</string>
+    <string name="theme_default">Default</string>
+    <string name="theme_default_desc">Deep-black glass with album-art glow</string>
+    <string name="theme_neo">Neomorphism</string>
+    <string name="theme_neo_desc">Soft, extruded matte surfaces</string>
 </resources>
